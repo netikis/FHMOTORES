@@ -321,33 +321,81 @@
             </div>
         </section>
 
-        <!-- ORÇAMENTOS -->
+        <!-- ORÇAMENTOS — Motor elétrico (não automotivo) -->
         <section id="secOrcamentos" class="section">
             <div class="card">
-                <h2>Novo Orçamento de Motor</h2>
+                <h2>Novo Orçamento — Motor Elétrico</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">
+                    Oficina de <strong>bobinagem</strong> (não é motor de carro): granja, máquina de lavar, industrial, bomba de piscina, etc.
+                    Serviço + peças com <strong>valor pago</strong> e <strong>valor cobrado</strong>. Total = mão de obra + valores cobrados.
+                </p>
                 <div class="bloco">
                     <div class="row">
-                        <div class="col"><label>Nº Orçamento</label><input type="number" id="orcNumero"></div>
+                        <div class="col"><label>Nº Orçamento</label><input type="text" id="orcNumero" style="font-weight:bold;color:#e74c3c" placeholder="001-2026" readonly></div>
                         <div class="col"><label>Data</label><input type="date" id="orcData"></div>
                         <div class="col"><label>Validade</label><input type="date" id="orcValidade"></div>
                     </div>
                     <div class="row">
                         <div class="col" style="flex:2"><label>Cliente</label>
-                            <input id="orcCliente" list="dlClientes" placeholder="Buscar ou digitar nome...">
+                            <input id="orcCliente" list="dlClientes" placeholder="Ex: Joselton, Sérgio...">
                             <datalist id="dlClientes"></datalist>
+                        </div>
+                        <div class="col"><label>Telefone</label><input id="orcTel" placeholder="WhatsApp"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col"><label>Tipo de Serviço</label>
+                            <select id="orcTipoServico" onchange="atualizarDescMotorOrc()">
+                                <option value="Rebobinamento">Rebobinamento</option>
+                                <option value="Revisão">Revisão / Manutenção</option>
+                                <option value="Troca de rolamentos">Troca de rolamentos</option>
+                                <option value="Montagem">Montagem</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="col"><label>Potência (CV)</label><input id="orcPotencia" placeholder="Ex: 0,75" oninput="atualizarDescMotorOrc()"></div>
+                        <div class="col"><label>Polos</label>
+                            <select id="orcPolos" onchange="atualizarDescMotorOrc()">
+                                <option value="2">2 polos</option>
+                                <option value="4">4 polos</option>
+                                <option value="6">6 polos</option>
+                                <option value="8">8 polos</option>
+                                <option value="">—</option>
+                            </select>
+                        </div>
+                        <div class="col"><label>Alimentação</label>
+                            <select id="orcFase" onchange="atualizarDescMotorOrc()">
+                                <option value="Monofásico">Monofásico</option>
+                                <option value="Trifásico">Trifásico</option>
+                                <option value="">—</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:8px">
+                        <div class="col" style="flex:1">
+                            <label>Atalhos — motores mais comuns</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('0,75','2')">0,75 CV 2p</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('1','2')">1 CV 2p</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('2','2')">2 CV 2p</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('3','2')">3 CV 2p</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('2','4')">2 CV 4p</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('3','4')">3 CV 4p</button>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col"><label>Veículo</label><input id="orcVeiculo" placeholder="Ex: Gol 1.0"></div>
-                        <div class="col"><label>Motor</label><input id="orcMotor" placeholder="Ex: EA111"></div>
-                        <div class="col"><label>Placa</label><input id="orcPlaca" maxlength="8"></div>
+                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label>
+                            <input id="orcMotor" placeholder="Ex: Rebob. motor 0,75 cv 2 polos">
+                        </div>
+                        <div class="col"><label>Nº Série / Identificação</label><input id="orcSerie" placeholder="Opcional"></div>
+                        <div class="col"><label>RPM (opc.)</label><input id="orcRpm" placeholder="Ex: 3500"></div>
                     </div>
                 </div>
                 <div class="bloco">
-                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">Adicionar Itens — Bipe ou busque</h3>
+                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">Peças — Valor pago × Valor cobrado (como no caderno)</h3>
                     <div class="row">
-                        <div class="col" style="flex:2"><label>Produto do Estoque (bipe o código)</label>
-                            <input id="orcProdBusca" class="campo-bipe" list="dlProdutos" placeholder="Bipe código de barras ou digite nome..." autocomplete="off"
+                        <div class="col" style="flex:2"><label>Peça do estoque (bipe)</label>
+                            <input id="orcProdBusca" class="campo-bipe" list="dlProdutos" placeholder="Ex: rolamento 6202, rotor, selo..." autocomplete="off"
                                 oninput="atualizarResumoEstoqueOrc()" onchange="preencherProdOrc()">
                             <datalist id="dlProdutos"></datalist>
                         </div>
@@ -360,24 +408,34 @@
                                 <option value="l">Litro</option>
                             </select>
                         </div>
-                        <div class="col"><label id="orcProdQtdLabel">Qtd.</label><input type="text" inputmode="decimal" id="orcProdQtd" value="1" oninput="atualizarResumoEstoqueOrc()"></div>
-                        <div class="col"><label>Valor Unit.</label><input type="number" id="orcProdValor" step="0.01"></div>
+                        <div class="col"><label>Qtd.</label><input type="text" inputmode="decimal" id="orcProdQtd" value="1" oninput="atualizarResumoEstoqueOrc()"></div>
+                        <div class="col"><label>Valor pago (custo)</label><input type="number" step="0.01" id="orcProdCusto" placeholder="98,08"></div>
+                        <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="orcProdValor" placeholder="120,00"></div>
                         <div class="col" style="align-self:flex-end"><button type="button" class="btn-success" style="width:100%" onclick="addItemOrc('peca')">+ Peça</button></div>
                     </div>
                     <div id="orcEstoqueResumo" class="estoque-resumo"></div>
                     <div class="row" style="margin-top:8px">
-                        <div class="col" style="flex:2"><label>Mão de Obra / Serviço</label><input id="orcServDesc" placeholder="Retífica, montagem..."></div>
-                        <div class="col"><label>Valor (R$)</label><input type="number" id="orcServValor" step="0.01"></div>
+                        <div class="col" style="flex:2"><label>Mão de Obra / Serviço (ex.: Rebob. motor)</label>
+                            <input id="orcServDesc" placeholder="Rebob. motor 0,75 cv 2 polos">
+                        </div>
+                        <div class="col"><label>Valor cobrado (R$)</label><input type="number" id="orcServValor" step="0.01" placeholder="410,00"></div>
                         <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addItemOrc('servico')">+ Serviço</button></div>
                     </div>
                 </div>
                 <div id="orcCarrinho"></div>
-                <div class="cart-total" id="orcTotal">TOTAL: R$ 0,00</div>
-                <div class="row" style="margin-top:12px">
-                    <div class="col"><label>Observações</label><textarea id="orcObs" rows="2"></textarea></div>
+                <div class="row" style="margin-top:8px;align-items:center">
+                    <div class="col"><div id="orcCustoTotal" style="font-size:12px;color:var(--muted)">Custo peças (pago): R$ 0,00</div></div>
+                    <div class="col"><div id="orcLucroTxt" style="font-size:13px;color:#2ecc71;font-weight:700">Lucro estimado: R$ 0,00</div></div>
+                    <div class="col"><div class="cart-total" id="orcTotal" style="margin:0">TOTAL: R$ 0,00</div></div>
                 </div>
-                <button class="btn-gold" style="width:100%;padding:14px;margin-top:10px" onclick="salvarOrcamento()">💾 SALVAR ORÇAMENTO</button>
-                <button class="btn-danger btn-sm" id="btnCancelOrc" style="display:none;margin-top:8px" onclick="cancelarEdicaoOrc()">Cancelar Edição</button>
+                <div class="row" style="margin-top:12px">
+                    <div class="col"><label>Observações</label><textarea id="orcObs" rows="2" placeholder="Prazo, garantia, condições..."></textarea></div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+                    <button class="btn-gold" style="flex:1;padding:14px" onclick="salvarOrcamento()">💾 SALVAR ORÇAMENTO</button>
+                    <button type="button" class="btn-info" style="padding:14px" onclick="imprimirOrcamentoAtual()">🖨️ Imprimir</button>
+                    <button class="btn-danger btn-sm" id="btnCancelOrc" style="display:none;padding:14px" onclick="cancelarEdicaoOrc()">Cancelar Edição</button>
+                </div>
             </div>
         </section>
 
@@ -385,10 +443,10 @@
         <section id="secOrcamentosAberto" class="section">
             <div class="card">
                 <h2>Orçamentos em Aberto</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">Ao fechar o motor, use <strong>✅ Converter Venda</strong> — migra para Vendas Concluídas e dá baixa no estoque sem redigitar.</p>
-                <div class="toolbar"><input class="search" id="buscaOrc" placeholder="Buscar..." oninput="renderOrcamentos()"></div>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">Ao finalizar o serviço no motor elétrico, use <strong>✅ Converter Venda</strong> — migra para Vendas Concluídas e dá baixa no estoque sem redigitar.</p>
+                <div class="toolbar"><input class="search" id="buscaOrc" placeholder="Buscar cliente, motor, nº..." oninput="renderOrcamentos()"></div>
                 <div style="overflow-x:auto">
-                    <table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Veículo/Motor</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+                    <table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Motor / Serviço</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
                     <tbody id="tbOrcamentos"></tbody></table>
                 </div>
             </div>
@@ -419,9 +477,12 @@
                         <div class="col">
                             <label>Forma de Pagamento</label>
                             <select id="vendaPagamento">
-                                <option>PIX</option><option>Dinheiro</option>
-                                <option>Cartão de Crédito</option><option>Cartão de Débito</option>
-                                <option>Boleto</option><option>Mercado Pago</option>
+                                <option value="PIX">PIX</option>
+                                <option value="Dinheiro">💵 Dinheiro</option>
+                                <option value="Cartão de Débito">💳 Cartão de Débito</option>
+                                <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                                <option value="Boleto">Boleto</option>
+                                <option value="Mercado Pago">Mercado Pago</option>
                             </select>
                         </div>
                     </div>
@@ -443,9 +504,26 @@
                             <input id="vendaCliente" list="dlClientesVenda" placeholder="Registrado ou avulso...">
                             <datalist id="dlClientesVenda"></datalist>
                         </div>
-                        <div class="col"><label>Veículo</label><input id="vendaVeiculo"></div>
-                        <div class="col"><label>Motor</label><input id="vendaMotor"></div>
-                        <div class="col"><label>Placa</label><input id="vendaPlaca" maxlength="8"></div>
+                        <div class="col"><label>Potência (CV)</label><input id="vendaPotencia" placeholder="0,75"></div>
+                        <div class="col"><label>Polos</label>
+                            <select id="vendaPolos">
+                                <option value="2">2</option><option value="4">4</option>
+                                <option value="6">6</option><option value="8">8</option><option value="">—</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label>
+                            <input id="vendaMotor" placeholder="Ex: Rebob. motor 0,75 cv 2 polos">
+                        </div>
+                        <div class="col"><label>Nº Série</label><input id="vendaSerie" placeholder="Opcional"></div>
+                        <div class="col"><label>Alimentação</label>
+                            <select id="vendaFase">
+                                <option value="Monofásico">Monofásico</option>
+                                <option value="Trifásico">Trifásico</option>
+                                <option value="">—</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -468,9 +546,9 @@
                             </select>
                         </div>
                         <div class="col"><label>Qtd.</label><input id="vendaProdQtd" value="1" inputmode="decimal" oninput="atualizarResumoEstoqueVenda();atualizarTotalLinhaVenda()"></div>
-                        <div class="col"><label>Custo</label><input type="number" step="0.01" id="vendaProdCusto" oninput="recalcularPrecoVenda()"></div>
+                        <div class="col"><label>Custo / Valor pago</label><input type="number" step="0.01" id="vendaProdCusto" oninput="recalcularPrecoVenda()"></div>
                         <div class="col"><label>Margem %</label><input type="number" step="0.1" id="vendaProdMargem" oninput="recalcularPrecoVenda()"></div>
-                        <div class="col"><label>Venda R$</label><input type="number" step="0.01" id="vendaProdPreco" oninput="recalcularMargemVenda()"></div>
+                        <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="vendaProdPreco" oninput="recalcularMargemVenda()"></div>
                         <div class="col"><label>Total</label><input id="vendaProdTotalLinha" readonly style="color:#2ecc71;font-weight:bold"></div>
                         <div class="col" style="align-self:flex-end"><button type="button" class="btn-success" style="width:100%" onclick="addAoCarrinhoVenda_Estoque()">+ ADD</button></div>
                     </div>
@@ -487,8 +565,8 @@
                 </div>
 
                 <div class="row" style="align-items:flex-end">
-                    <div class="col" style="flex:2"><label>3. Mão de Obra / Serviço</label><input id="vendaMODesc" placeholder="Retífica, montagem..."></div>
-                    <div class="col"><label>Valor R$</label><input type="number" step="0.01" id="vendaMOValor"></div>
+                    <div class="col" style="flex:2"><label>3. Mão de Obra / Serviço</label><input id="vendaMODesc" placeholder="Rebob. motor 0,75 cv 2 polos..."></div>
+                    <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaMOValor" placeholder="410,00"></div>
                     <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addAoCarrinhoVenda_MO()">+ Serv</button></div>
                 </div>
             </div>
@@ -531,7 +609,7 @@
                 </div>
                 <div class="toolbar"><input class="search" id="buscaVenda" placeholder="Buscar venda..." oninput="renderVendas()"></div>
                 <div style="overflow-x:auto">
-                    <table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Veículo</th><th>Total</th><th>Pgto</th><th>Caixas</th><th>Ações</th></tr></thead>
+                    <table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Motor / Serviço</th><th>Total</th><th>Pgto</th><th>Caixas</th><th>Ações</th></tr></thead>
                     <tbody id="tbVendas"></tbody></table>
                 </div>
             </div>
@@ -593,13 +671,13 @@
         <!-- CONTAS MOTORES -->
         <section id="secMotores" class="section">
             <div class="card">
-                <h2>Contas dos Motores em Serviço</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">Registre custos e receitas de cada motor em produção (peças compradas, serviços terceirizados, etc.).</p>
+                <h2>Contas dos Motores Elétricos em Serviço</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">Custos e receitas por motor elétrico (rebobinamento, rolamentos, selos, etc.).</p>
                 <div class="bloco">
                     <div class="row">
-                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label><input id="motDesc" placeholder="Ex: Motor Gol EA111 - Cliente João"></div>
+                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label><input id="motDesc" placeholder="Ex: Rebob. motor 0,75 cv 2 polos — Cliente Joselton"></div>
                         <div class="col"><label>Cliente</label><input id="motCliente" list="dlClientesMot"><datalist id="dlClientesMot"></datalist></div>
-                        <div class="col"><label>Placa</label><input id="motPlaca"></div>
+                        <div class="col"><label>Nº Série</label><input id="motPlaca" placeholder="Identificação"></div>
                     </div>
                     <button class="btn-primary" onclick="criarContaMotor()">➕ Nova Conta de Motor</button>
                 </div>
@@ -624,7 +702,7 @@
             <div class="card">
                 <h2>Motores em Andamento</h2>
                 <div style="overflow-x:auto">
-                    <table><thead><tr><th>Descrição</th><th>Cliente</th><th>Placa</th><th>Custos</th><th>Receitas</th><th>Resultado</th><th>Ações</th></tr></thead>
+                    <table><thead><tr><th>Descrição</th><th>Cliente</th><th>Nº Série</th><th>Custos</th><th>Receitas</th><th>Resultado</th><th>Ações</th></tr></thead>
                     <tbody id="tbMotores"></tbody></table>
                 </div>
             </div>
@@ -722,8 +800,12 @@
         </select>
         <label>Forma de Pagamento</label>
         <select id="convFormaPgto">
-            <option>PIX</option><option>Dinheiro</option><option>Cartão de Crédito</option>
-            <option>Cartão de Débito</option><option>Boleto</option><option>Mercado Pago</option>
+            <option value="PIX">PIX</option>
+            <option value="Dinheiro">💵 Dinheiro</option>
+            <option value="Cartão de Débito">💳 Cartão de Débito</option>
+            <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+            <option value="Boleto">Boleto</option>
+            <option value="Mercado Pago">Mercado Pago</option>
         </select>
         <button class="btn-success" style="width:100%;margin-top:14px;padding:12px" onclick="confirmarConversao()">✅ Confirmar Venda</button>
     </div>
@@ -1277,11 +1359,45 @@ window.preencherProdOrc = function() {
     const p = window.buscarProduto(termo);
     if (p) {
         document.getElementById('orcProdBusca').value = p.codigo || p.nome;
-        document.getElementById('orcProdValor').value = p.venda || 0;
+        document.getElementById('orcProdCusto').value = (parseFloat(p.custo) || 0).toFixed(2);
+        document.getElementById('orcProdValor').value = (parseFloat(p.venda) || 0).toFixed(2);
         document.getElementById('orcUnidade').value = '';
     }
     atualizarResumoEstoqueOrc();
 };
+
+window.atualizarDescMotorOrc = function() {
+    const tipo = document.getElementById('orcTipoServico').value || '';
+    const pot = (document.getElementById('orcPotencia').value || '').trim();
+    const polos = document.getElementById('orcPolos').value || '';
+    const fase = document.getElementById('orcFase').value || '';
+    let abrev = tipo;
+    if (tipo === 'Rebobinamento') abrev = 'Rebob.';
+    let partes = [abrev, 'motor'];
+    if (pot) partes.push(pot.replace('.', ',') + ' cv');
+    if (polos) partes.push(polos + ' polos');
+    if (fase) partes.push(fase.toLowerCase());
+    const desc = partes.join(' ');
+    const motorEl = document.getElementById('orcMotor');
+    const servEl = document.getElementById('orcServDesc');
+    if (motorEl && (!motorEl.dataset.manual || motorEl.dataset.manual === '0')) motorEl.value = desc;
+    if (servEl && !servEl.value.trim()) servEl.value = desc;
+};
+
+window.aplicarPresetMotor = function(cv, polos) {
+    document.getElementById('orcTipoServico').value = 'Rebobinamento';
+    document.getElementById('orcPotencia').value = cv;
+    document.getElementById('orcPolos').value = String(polos);
+    const motorEl = document.getElementById('orcMotor');
+    if (motorEl) motorEl.dataset.manual = '0';
+    atualizarDescMotorOrc();
+    const serv = document.getElementById('orcServDesc');
+    if (serv) serv.value = document.getElementById('orcMotor').value;
+};
+document.addEventListener('DOMContentLoaded', function() {
+    const m = document.getElementById('orcMotor');
+    if (m) m.addEventListener('input', function() { this.dataset.manual = this.value.trim() ? '1' : '0'; });
+});
 
 window.atualizarResumoEstoqueOrc = function() {
     const box = document.getElementById('orcEstoqueResumo');
@@ -1290,8 +1406,10 @@ window.atualizarResumoEstoqueOrc = function() {
     if (!p) { box.style.display = 'none'; return; }
     const disp = window.calcularDisponivelEstoque(p, carrinhoOrc);
     const qCampo = window.parseQtdEstoque(document.getElementById('orcProdQtd').value);
+    const custo = parseFloat(document.getElementById('orcProdCusto').value) || 0;
+    const cobrado = parseFloat(document.getElementById('orcProdValor').value) || 0;
     let html = `<strong>Estoque:</strong> ${window.formatQtdComUnidade(disp.cadastro, p.unidadeMedida)} &nbsp;|&nbsp;
-        <strong>No carrinho:</strong> ${window.formatQtdComUnidade(disp.reservado, p.unidadeMedida)} &nbsp;|&nbsp;
+        <strong>Pago:</strong> ${fmt(custo)} &nbsp;|&nbsp; <strong>Cobrado:</strong> ${fmt(cobrado)} &nbsp;|&nbsp;
         <strong style="color:#f1c40f">Livre:</strong> ${window.formatQtdComUnidade(Math.max(0, disp.livre), p.unidadeMedida)}`;
     if (!isNaN(qCampo) && qCampo > disp.livre + 0.0001) {
         html += `<br><span style="color:#e74c3c">⚠ Quantidade passa do disponível!</span>`;
@@ -1299,6 +1417,21 @@ window.atualizarResumoEstoqueOrc = function() {
     box.innerHTML = html;
     box.style.display = 'block';
 };
+
+function formatNumOrc(n, ano) {
+    const y = ano || new Date().getFullYear();
+    const seq = parseInt(n, 10) || 0;
+    return String(seq).padStart(3, '0') + '-' + y;
+}
+function parseNumOrc(str) {
+    if (str == null || str === '') return null;
+    const s = String(str);
+    if (s.includes('-')) return parseInt(s.split('-')[0], 10) || 0;
+    return parseInt(s, 10) || 0;
+}
+function descMotorDoc(d) {
+    return d.motor || d.descricaoMotor || [d.veiculo, d.placa].filter(Boolean).join(' / ') || '-';
+}
 
 // ==================== LANÇAR VENDA (FH Control) ====================
 window.unidadeEfetivaVenda = function(p, selEl) {
@@ -1533,9 +1666,11 @@ window.limparFormVenda = async function() {
     document.getElementById('vendaData').value = hoje();
     document.getElementById('vendaVencimento').value = '';
     document.getElementById('vendaCliente').value = '';
-    document.getElementById('vendaVeiculo').value = '';
     document.getElementById('vendaMotor').value = '';
-    document.getElementById('vendaPlaca').value = '';
+    const vp = document.getElementById('vendaPotencia'); if (vp) vp.value = '';
+    const vpo = document.getElementById('vendaPolos'); if (vpo) vpo.value = '2';
+    const vf = document.getElementById('vendaFase'); if (vf) vf.value = 'Monofásico';
+    const vs = document.getElementById('vendaSerie'); if (vs) vs.value = '';
     document.getElementById('vendaDescReais').value = '0';
     document.getElementById('vendaDescPerc').value = '0';
     document.getElementById('vendaValorRecebido').value = '';
@@ -1564,9 +1699,11 @@ window.editarVenda = function(id) {
     document.getElementById('vendaData').value = d.data || d.dataConversao || hoje();
     document.getElementById('vendaVencimento').value = d.validade || d.vencimento || '';
     document.getElementById('vendaCliente').value = d.clienteNome || '';
-    document.getElementById('vendaVeiculo').value = d.veiculo || '';
     document.getElementById('vendaMotor').value = d.motor || '';
-    document.getElementById('vendaPlaca').value = d.placa || '';
+    const vp = document.getElementById('vendaPotencia'); if (vp) vp.value = d.potencia || '';
+    const vpo = document.getElementById('vendaPolos'); if (vpo) vpo.value = d.polos || '';
+    const vf = document.getElementById('vendaFase'); if (vf) vf.value = d.fase || '';
+    const vs = document.getElementById('vendaSerie'); if (vs) vs.value = d.serie || d.placa || '';
     document.getElementById('vendaDescReais').value = d.descontoReais || 0;
     document.getElementById('vendaDescPerc').value = d.descontoPerc || 0;
     document.getElementById('vendaValorRecebido').value = d.valorRecebido || '';
@@ -1641,9 +1778,13 @@ window.finalizarVenda = async function() {
             validade: document.getElementById('vendaVencimento').value,
             vencimento: document.getElementById('vendaVencimento').value,
             clienteNome: cliente, clienteId: cli ? cli.id : 'avulso',
-            veiculo: document.getElementById('vendaVeiculo').value,
+            veiculo: '',
             motor: document.getElementById('vendaMotor').value,
-            placa: document.getElementById('vendaPlaca').value,
+            potencia: (document.getElementById('vendaPotencia')||{}).value || '',
+            polos: (document.getElementById('vendaPolos')||{}).value || '',
+            fase: (document.getElementById('vendaFase')||{}).value || '',
+            serie: (document.getElementById('vendaSerie')||{}).value || '',
+            placa: (document.getElementById('vendaSerie')||{}).value || '',
             itens: itensSalvar, total,
             descontoReais: parseFloat(document.getElementById('vendaDescReais').value) || 0,
             descontoPerc: parseFloat(document.getElementById('vendaDescPerc').value) || 0,
@@ -1679,35 +1820,42 @@ window.finalizarVenda = async function() {
     }
 };
 
-// ==================== ORÇAMENTOS ====================
+// ==================== ORÇAMENTOS (motor elétrico) ====================
 window.addItemOrc = function(tipo) {
     if (tipo === 'peca') {
         const termo = document.getElementById('orcProdBusca').value.trim();
         const qtd = window.parseQtdEstoque(document.getElementById('orcProdQtd').value);
-        const valor = parseFloat(document.getElementById('orcProdValor').value) || 0;
+        const valorPago = parseFloat(document.getElementById('orcProdCusto').value) || 0;
+        const valorCobrado = parseFloat(document.getElementById('orcProdValor').value) || 0;
         if (!termo) return Swal.fire('Atenção','Bipe ou informe o produto','warning');
         if (isNaN(qtd) || qtd <= 0) return Swal.fire('Atenção','Quantidade inválida','warning');
+        if (valorCobrado <= 0) return Swal.fire('Atenção','Informe o valor cobrado','warning');
         const p = window.buscarProduto(termo);
         if (!p) return Swal.fire('Atenção','Produto não encontrado no estoque','warning');
         const disp = window.calcularDisponivelEstoque(p, carrinhoOrc);
         if (qtd > disp.livre + 0.0001) {
             return Swal.fire('Estoque insuficiente',
-                `Produto: ${p.nome}\nCadastro: ${window.formatQtdComUnidade(disp.cadastro, p.unidadeMedida)}\nNo carrinho: ${window.formatQtdComUnidade(disp.reservado, p.unidadeMedida)}\nDisponível: ${window.formatQtdComUnidade(disp.livre, p.unidadeMedida)}`, 'warning');
+                `Produto: ${p.nome}\nDisponível: ${window.formatQtdComUnidade(disp.livre, p.unidadeMedida)}`, 'warning');
         }
         const ue = document.getElementById('orcUnidade').value ? window.normalizarUnidade(document.getElementById('orcUnidade').value) : window.normalizarUnidade(p.unidadeMedida);
         const nomeExibir = `${p.nome} (Cód: ${p.codigo||'-'}) — ${window.formatQtdComUnidade(qtd, ue)}`;
-        carrinhoOrc.push({ nome: nomeExibir, qtd, valor, total: qtd*valor, tipo:'peca', idProd: p.id, ehEstoque: true, unidadeMedida: ue });
+        carrinhoOrc.push({
+            nome: nomeExibir, qtd, valor: valorCobrado, total: qtd * valorCobrado,
+            valorPago, custoOriginal: valorPago, totalPago: qtd * valorPago,
+            tipo:'peca', idProd: p.id, ehEstoque: true, unidadeMedida: ue
+        });
         document.getElementById('orcProdBusca').value = '';
         document.getElementById('orcProdQtd').value = '1';
+        document.getElementById('orcProdCusto').value = '';
         document.getElementById('orcProdValor').value = '';
         document.getElementById('orcUnidade').value = '';
         window._linhaEstoqueEmEdicao = null;
         document.getElementById('orcEstoqueResumo').style.display = 'none';
     } else {
-        const nome = document.getElementById('orcServDesc').value.trim();
+        const nome = document.getElementById('orcServDesc').value.trim() || document.getElementById('orcMotor').value.trim();
         const valor = parseFloat(document.getElementById('orcServValor').value)||0;
-        if (!nome || valor <= 0) return Swal.fire('Atenção','Informe serviço e valor','warning');
-        carrinhoOrc.push({ nome: `[M.O.] ${nome}`, qtd:1, valor, total:valor, tipo:'servico', ehEstoque:false });
+        if (!nome || valor <= 0) return Swal.fire('Atenção','Informe o serviço (ex.: Rebob. motor...) e o valor cobrado','warning');
+        carrinhoOrc.push({ nome: `[M.O.] ${nome}`, qtd:1, valor, total:valor, valorPago:0, custoOriginal:0, totalPago:0, tipo:'servico', ehEstoque:false });
         document.getElementById('orcServDesc').value = ''; document.getElementById('orcServValor').value = '';
     }
     renderCarrinhoOrc();
@@ -1717,34 +1865,64 @@ window.removerItemOrc = function(i) { carrinhoOrc.splice(i,1); renderCarrinhoOrc
 
 function renderCarrinhoOrc() {
     const el = document.getElementById('orcCarrinho');
-    if (!carrinhoOrc.length) { el.innerHTML = '<p style="color:var(--muted);font-size:12px">Nenhum item.</p>'; document.getElementById('orcTotal').textContent = 'TOTAL: R$ 0,00'; return; }
-    let total = 0;
+    if (!carrinhoOrc.length) {
+        el.innerHTML = '<p style="color:var(--muted);font-size:12px">Nenhum item — adicione serviço e peças como no caderno.</p>';
+        document.getElementById('orcTotal').textContent = 'TOTAL: R$ 0,00';
+        const c = document.getElementById('orcCustoTotal'); if (c) c.textContent = 'Custo peças (pago): R$ 0,00';
+        const l = document.getElementById('orcLucroTxt'); if (l) l.textContent = 'Lucro estimado: R$ 0,00';
+        return;
+    }
+    let total = 0, totalPago = 0;
     el.innerHTML = carrinhoOrc.map((it,i) => {
-        total += it.total;
-        return `<div class="cart-item"><span>${it.qtd}x ${it.nome} — ${fmt(it.total)}</span>
+        total += it.total || 0;
+        totalPago += it.totalPago || ((it.valorPago || it.custoOriginal || 0) * (it.qtd || 1));
+        const ehServ = it.tipo === 'servico';
+        const extra = ehServ ? '' : ` <small style="color:#95a5a6">(pago ${fmt(it.valorPago || it.custoOriginal || 0)})</small>`;
+        return `<div class="cart-item"><span>${ehServ ? '' : (it.qtd + 'x ')}${it.nome}${extra} — <strong>${fmt(it.total)}</strong></span>
         <button class="btn-acao" onclick="removerItemOrc(${i})">🗑️</button></div>`;
     }).join('');
+    const lucro = total - totalPago;
     document.getElementById('orcTotal').textContent = 'TOTAL: ' + fmt(total);
+    const c = document.getElementById('orcCustoTotal'); if (c) c.textContent = 'Custo peças (pago): ' + fmt(totalPago);
+    const l = document.getElementById('orcLucroTxt'); if (l) l.textContent = 'Lucro estimado: ' + fmt(lucro);
 }
 
 async function gerarNumOrc() {
+    const ano = new Date().getFullYear();
     const orcs = documentos.filter(d => d.tipo === 'ORCAMENTO');
-    const nums = orcs.map(o => parseInt(o.numero)||0);
-    return (nums.length ? Math.max(...nums) : 1000) + 1;
+    let maxSeq = 0;
+    orcs.forEach(o => {
+        const n = parseNumOrc(o.numeroFmt || o.numero);
+        const a = o.anoOrc || (String(o.numeroFmt || '').includes('-') ? parseInt(String(o.numeroFmt).split('-')[1], 10) : ano);
+        if (a === ano && n > maxSeq) maxSeq = n;
+    });
+    return formatNumOrc(maxSeq + 1 || 1, ano);
 }
 
 window.salvarOrcamento = async function() {
     const cliente = document.getElementById('orcCliente').value.trim();
-    if (!cliente || !carrinhoOrc.length) return Swal.fire('Atenção','Preencha cliente e itens','warning');
-    const total = carrinhoOrc.reduce((s,i) => s+i.total, 0);
+    if (!cliente || !carrinhoOrc.length) return Swal.fire('Atenção','Preencha cliente e itens (serviço + peças)','warning');
+    const total = carrinhoOrc.reduce((s,i) => s + (i.total || 0), 0);
+    const totalPago = carrinhoOrc.reduce((s,i) => s + (i.totalPago || ((i.valorPago || i.custoOriginal || 0) * (i.qtd || 1))), 0);
     const cli = clientes.find(c => c.nome.toLowerCase() === cliente.toLowerCase());
+    const numeroFmt = document.getElementById('orcNumero').value || await gerarNumOrc();
+    const numero = parseNumOrc(numeroFmt);
+    const anoOrc = parseInt(String(numeroFmt).split('-')[1], 10) || new Date().getFullYear();
     const doc = {
-        tipo: 'ORCAMENTO', numero: parseInt(document.getElementById('orcNumero').value) || await gerarNumOrc(),
+        tipo: 'ORCAMENTO', numero, numeroFmt, anoOrc,
         data: document.getElementById('orcData').value || hoje(),
         validade: document.getElementById('orcValidade').value,
         clienteNome: cliente, clienteId: cli ? cli.id : 'avulso',
-        veiculo: document.getElementById('orcVeiculo').value, motor: document.getElementById('orcMotor').value,
-        placa: document.getElementById('orcPlaca').value, itens: [...carrinhoOrc], total,
+        telefone: document.getElementById('orcTel').value,
+        motor: document.getElementById('orcMotor').value,
+        potencia: document.getElementById('orcPotencia').value,
+        polos: document.getElementById('orcPolos').value,
+        fase: document.getElementById('orcFase').value,
+        tipoServico: document.getElementById('orcTipoServico').value,
+        serie: document.getElementById('orcSerie').value,
+        rpm: document.getElementById('orcRpm').value,
+        veiculo: '', placa: document.getElementById('orcSerie').value,
+        itens: [...carrinhoOrc], total, totalPago, lucro: total - totalPago,
         observacao: document.getElementById('orcObs').value, statusPagamento: 'PENDENTE',
         timestamp: Date.now(), dataStr: agora()
     };
@@ -1752,11 +1930,14 @@ window.salvarOrcamento = async function() {
         if (editandoOrcId) { await dbSet('documentos/'+editandoOrcId, doc); cancelarEdicaoOrc(); }
         else { await dbPush('documentos', doc); }
         carrinhoOrc = []; renderCarrinhoOrc();
-        document.getElementById('orcCliente').value = ''; document.getElementById('orcVeiculo').value = '';
-        document.getElementById('orcMotor').value = ''; document.getElementById('orcPlaca').value = '';
-        document.getElementById('orcObs').value = '';
+        ['orcCliente','orcTel','orcPotencia','orcSerie','orcRpm','orcObs','orcMotor','orcServDesc'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        const mot = document.getElementById('orcMotor'); if (mot) mot.dataset.manual = '0';
         document.getElementById('orcNumero').value = await gerarNumOrc();
-        Swal.fire({ icon:'success', title:'Orçamento salvo!', timer:1500, showConfirmButton:false });
+        atualizarDescMotorOrc();
+        Swal.fire({ icon:'success', title:'Orçamento salvo!', text: 'Nº ' + numeroFmt, timer:1800, showConfirmButton:false });
+        renderOrcamentos();
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
 };
 
@@ -1768,18 +1949,87 @@ window.cancelarEdicaoOrc = function() {
 window.editarOrc = function(id) {
     const d = documentos.find(x => x.id === id); if (!d) return;
     editandoOrcId = id;
-    document.getElementById('orcNumero').value = d.numero||'';
+    document.getElementById('orcNumero').value = d.numeroFmt || formatNumOrc(d.numero, d.anoOrc);
     document.getElementById('orcData').value = d.data||'';
     document.getElementById('orcValidade').value = d.validade||'';
     document.getElementById('orcCliente').value = d.clienteNome||'';
-    document.getElementById('orcVeiculo').value = d.veiculo||'';
+    const tel = document.getElementById('orcTel'); if (tel) tel.value = d.telefone||'';
     document.getElementById('orcMotor').value = d.motor||'';
-    document.getElementById('orcPlaca').value = d.placa||'';
+    document.getElementById('orcMotor').dataset.manual = d.motor ? '1' : '0';
+    const pot = document.getElementById('orcPotencia'); if (pot) pot.value = d.potencia||'';
+    const pol = document.getElementById('orcPolos'); if (pol) pol.value = d.polos||'';
+    const fase = document.getElementById('orcFase'); if (fase) fase.value = d.fase||'';
+    const ts = document.getElementById('orcTipoServico'); if (ts && d.tipoServico) ts.value = d.tipoServico;
+    const ser = document.getElementById('orcSerie'); if (ser) ser.value = d.serie || d.placa || '';
+    const rpm = document.getElementById('orcRpm'); if (rpm) rpm.value = d.rpm||'';
     document.getElementById('orcObs').value = d.observacao||'';
     carrinhoOrc = d.itens ? [...d.itens] : [];
     renderCarrinhoOrc();
     document.getElementById('btnCancelOrc').style.display = 'inline-block';
     abrirSecao('secOrcamentos', document.querySelector('[data-sec=secOrcamentos]'));
+};
+
+window.imprimirOrcamentoAtual = function(idDoc) {
+    let d = null;
+    if (idDoc) d = documentos.find(x => x.id === idDoc);
+    else if (editandoOrcId) d = documentos.find(x => x.id === editandoOrcId);
+    else {
+        d = {
+            numeroFmt: document.getElementById('orcNumero').value,
+            data: document.getElementById('orcData').value || hoje(),
+            validade: document.getElementById('orcValidade').value,
+            clienteNome: document.getElementById('orcCliente').value,
+            telefone: document.getElementById('orcTel').value,
+            motor: document.getElementById('orcMotor').value,
+            potencia: document.getElementById('orcPotencia').value,
+            polos: document.getElementById('orcPolos').value,
+            fase: document.getElementById('orcFase').value,
+            serie: document.getElementById('orcSerie').value,
+            observacao: document.getElementById('orcObs').value,
+            itens: carrinhoOrc, total: carrinhoOrc.reduce((s,i)=>s+(i.total||0),0)
+        };
+    }
+    if (!d || !(d.itens||[]).length) return Swal.fire('Atenção','Adicione itens ao orçamento antes de imprimir','warning');
+    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
+    const logo = (empresa && empresa.logo) || '';
+    let linhas = '';
+    (d.itens||[]).forEach(it => {
+        const ehServ = it.tipo === 'servico' || String(it.nome||'').includes('[M.O.]');
+        linhas += `<tr>
+            <td>${ehServ ? 'Serviço' : 'Peça'}</td>
+            <td>${it.nome}</td>
+            <td style="text-align:center">${it.qtd||1}</td>
+            <td style="text-align:right">${fmt(it.total)}</td>
+        </tr>`;
+    });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Orçamento ${d.numeroFmt||d.numero}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#222;padding:24px;max-width:800px;margin:auto}
+      h1{margin:0;font-size:22px} .muted{color:#666;font-size:12px}
+      table{width:100%;border-collapse:collapse;margin-top:16px} th,td{border-bottom:1px solid #ddd;padding:8px;font-size:13px}
+      th{background:#0d3b66;color:#fff;text-align:left} .tot{font-size:20px;font-weight:bold;text-align:right;margin-top:12px}
+      .head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+      img{max-height:70px} @media print{button{display:none}}
+    </style></head><body>
+    <div class="head"><div>${logo?`<img src="${logo}" alt="logo">`:''}<h1>${empNome}</h1>
+    <div class="muted">Orçamento de motor elétrico</div></div>
+    <div><strong>Orçamento n. ${d.numeroFmt || d.numero}</strong><br>
+    Data: ${d.data||'-'} ${d.validade?(' | Validade: '+d.validade):''}<br>
+    Cliente: <strong>${d.clienteNome||'-'}</strong>${d.telefone?(' — '+d.telefone):''}<br>
+    Motor/Serviço: <strong>${d.motor||'-'}</strong><br>
+    ${d.potencia?('Potência: '+d.potencia+' CV '):''}${d.polos?('| Polos: '+d.polos+' '):''}${d.fase?('| '+d.fase):''}
+    ${d.serie?('<br>Nº série: '+d.serie):''}
+    </div>
+    <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Valor cobrado</th></tr></thead>
+    <tbody>${linhas}</tbody></table>
+    <div class="tot">TOTAL: ${fmt(d.total)}</div>
+    ${d.observacao?('<p class="muted">Obs.: '+d.observacao+'</p>'):''}
+    <p class="muted" style="margin-top:28px">Valores sujeitos a confirmação. Peças: valor cobrado ao cliente.</p>
+    <button onclick="window.print()">Imprimir</button>
+    <script>window.print()<\/script></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return Swal.fire('Atenção','Permita pop-ups para imprimir','warning');
+    w.document.write(html); w.document.close();
 };
 
 window.abrirConverter = function(id) {
@@ -1879,15 +2129,17 @@ async function lancarVendaNasCaixas(doc, tipoVenda) {
 function renderOrcamentos() {
     const busca = (document.getElementById('buscaOrc').value||'').toLowerCase();
     const tb = document.getElementById('tbOrcamentos'); tb.innerHTML = '';
-    documentos.filter(d => d.tipo === 'ORCAMENTO' && (!busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numero).includes(busca)))
+    documentos.filter(d => d.tipo === 'ORCAMENTO' && (!busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numeroFmt||d.numero).includes(busca) || (d.motor||'').toLowerCase().includes(busca)))
     .forEach(d => {
+        const num = d.numeroFmt || d.numero;
         tb.innerHTML += `<tr>
-            <td>${d.numero}</td><td>${d.data||'-'}</td><td>${d.clienteNome}</td>
-            <td>${d.veiculo||''} ${d.motor?'/ '+d.motor:''}</td><td>${fmt(d.total)}</td>
+            <td>${num}</td><td>${d.data||'-'}</td><td>${d.clienteNome}</td>
+            <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td>
             <td><span class="badge badge-orc">ORÇAMENTO</span></td>
             <td class="acoes">
                 <button class="btn-acao" onclick="editarOrc('${d.id}')">✏️ Editar</button>
                 <button class="btn-acao" style="background:#27ae60;color:#fff" onclick="abrirConverter('${d.id}')">✅ Converter Venda</button>
+                <button class="btn-acao" onclick="imprimirOrcamentoAtual('${d.id}')">🖨️</button>
                 <button class="btn-acao" onclick="excluirDoc('${d.id}')">🗑️</button>
             </td></tr>`;
     });
@@ -1916,8 +2168,8 @@ function renderVendas() {
         const cx = rotuloCaixaVenda(d.tipoVenda);
         const trClass = d.statusPagamento === 'PENDENTE' ? ' class="linha-pendente"' : '';
         tb.innerHTML += `<tr${trClass}>
-            <td>${d.numero}</td><td>${d.dataConversao||d.data||'-'}</td><td>${d.clienteNome}</td>
-            <td>${d.veiculo||'-'}</td><td>${fmt(d.total)}</td><td>${st}</td><td>${cx}</td>
+            <td>${d.numeroFmt||d.numero}</td><td>${d.dataConversao||d.data||'-'}</td><td>${d.clienteNome}</td>
+            <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td><td>${st}</td><td>${cx}</td>
             <td class="acoes">
                 <button class="btn-acao" onclick="editarVenda('${d.id}')">✏️</button>
                 <button class="btn-acao" onclick="excluirDoc('${d.id}')">🗑️</button>
@@ -2435,7 +2687,7 @@ window.fecharTodosAlertasDocs = function() {
 // ==================== INIT ====================
 document.getElementById('orcData').value = hoje();
 document.getElementById('vendaData').value = hoje();
-gerarNumOrc().then(n => { document.getElementById('orcNumero').value = n; });
+gerarNumOrc().then(n => { document.getElementById('orcNumero').value = n; atualizarDescMotorOrc(); });
 gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; });
 refreshFromStore();
 setInterval(monitorarVencimentosDocumentos, 60000);
