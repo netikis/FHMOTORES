@@ -517,6 +517,7 @@
                 <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
                     <button class="btn-gold" style="flex:1;padding:14px" onclick="salvarOrcamento()">💾 SALVAR ORÇAMENTO</button>
                     <button type="button" class="btn-info" style="padding:14px" onclick="imprimirOrcamentoAtual()">🖨️ Imprimir</button>
+                    <button type="button" class="btn-acao pdf" style="padding:14px;font-size:13px" onclick="gerarPDFOrcamentoAtual()" title="Gerar PDF A4">📄 PDF</button>
                     <button class="btn-danger btn-sm" id="btnCancelOrc" style="display:none;padding:14px" onclick="cancelarEdicaoOrc()">Cancelar Edição</button>
                 </div>
             </div>
@@ -2310,6 +2311,10 @@ window.imprimirOrcamentoAtual = function(idDoc) {
     window.abrirPdfDocumento(d, 'loja');
 };
 
+window.gerarPDFOrcamentoAtual = function() {
+    window.imprimirOrcamentoAtual();
+};
+
 window.abrirConverter = function(id) {
     document.getElementById('convOrcId').value = id;
     document.getElementById('modalConverter').classList.add('open');
@@ -2429,13 +2434,15 @@ function renderOrcamentos() {
             <td>${num}</td><td>${d.data||'-'}</td><td>${d.clienteNome}</td>
             <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td>
             <td><span class="badge badge-orc">ORÇAMENTO</span></td>
-            <td class="acoes">
-                <button class="btn-acao" onclick="editarOrc('${d.id}')">✏️ Editar</button>
-                <button class="btn-acao" style="background:#27ae60;color:#fff" onclick="abrirConverter('${d.id}')">✅ Converter Venda</button>
-                <button class="btn-acao" onclick="imprimirOrcamentoAtual('${d.id}')">🖨️</button>
-                <button class="btn-acao" onclick="visualizarNota('${d.id}')">👁️</button>
-                <button class="btn-acao" onclick="excluirDoc('${d.id}')">🗑️</button>
-            </td></tr>`;
+            <td class="celula-acoes"><div class="acoes-flex">
+                <button type="button" class="btn-acao edit" onclick="editarOrc('${d.id}')" title="Editar">✏️ Editar</button>
+                <button type="button" class="btn-acao receber" style="background:#27ae60;color:#fff;border-color:#27ae60" onclick="abrirConverter('${d.id}')" title="Converter em venda">✅ Converter Venda</button>
+                <button type="button" class="btn-acao pdf" onclick="gerarPDFVenda('${d.id}')" title="Gerar PDF A4">📄 PDF</button>
+                <button type="button" class="btn-acao" onclick="gerarPDFCliente('${d.id}')" title="PDF para enviar ao cliente">📤 PDF Cliente</button>
+                <button type="button" class="btn-acao" onclick="imprimirOrcamentoAtual('${d.id}')" title="Imprimir">🖨️</button>
+                <button type="button" class="btn-acao" onclick="visualizarNota('${d.id}')" title="Visualizar">👁️</button>
+                <button type="button" class="btn-acao del" onclick="excluirDoc('${d.id}')" title="Excluir">🗑️</button>
+            </div></td></tr>`;
     });
 }
 window.renderOrcamentos = renderOrcamentos;
