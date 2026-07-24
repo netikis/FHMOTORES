@@ -1631,7 +1631,9 @@ window.atualizarResumoEstoqueOrc = function() {
         <strong>Pago:</strong> ${fmt(custo)} &nbsp;|&nbsp; <strong>Cobrado:</strong> ${fmt(cobrado)} &nbsp;|&nbsp;
         <strong style="color:#f1c40f">Livre:</strong> ${window.formatQtdComUnidade(Math.max(0, disp.livre), p.unidadeMedida)}`;
     if (!isNaN(qCampo) && qCampo > disp.livre + 0.0001) {
-        html += `<br><span style="color:#e74c3c">⚠ Quantidade passa do disponível!</span>`;
+        html += `<br><span style="color:#f1c40f">ℹ Estoque baixo/zerado — no orçamento pode incluir. Só exige quantidade na venda.</span>`;
+    } else {
+        html += `<br><span style="color:#95a5a6;font-size:11px">Orçamento não baixa estoque. A disponibilidade será conferida na venda.</span>`;
     }
     box.innerHTML = html;
     box.style.display = 'block';
@@ -1748,7 +1750,14 @@ window.atualizarResumoEstoqueVenda = function() {
     let html = `<strong>Estoque:</strong> ${window.formatQtdComUnidade(disp.cadastro, p.unidadeMedida)} &nbsp;|&nbsp;
         <strong>No carrinho:</strong> ${window.formatQtdComUnidade(disp.reservado, p.unidadeMedida)} &nbsp;|&nbsp;
         <strong style="color:#f1c40f">Livre:</strong> ${window.formatQtdComUnidade(Math.max(0, disp.livre), p.unidadeMedida)}`;
-    if (!isNaN(qCampo) && qCampo > disp.livre + 0.0001) html += `<br><span style="color:#e74c3c">⚠ Quantidade passa do disponível!</span>`;
+    if (!isNaN(qCampo) && qCampo > disp.livre + 0.0001) {
+        const tipoDoc = (document.getElementById('vendaTipoDoc') || {}).value || 'VENDA';
+        if (tipoDoc === 'ORCAMENTO') {
+            html += `<br><span style="color:#f1c40f">ℹ Estoque baixo — no orçamento pode incluir. Só exige na venda.</span>`;
+        } else {
+            html += `<br><span style="color:#e74c3c">⚠ Quantidade passa do disponível!</span>`;
+        }
+    }
     box.innerHTML = html; box.style.display = 'block';
 };
 
@@ -1762,8 +1771,9 @@ window.addAoCarrinhoVenda_Estoque = function() {
     if (isNaN(qtd) || qtd <= 0) return Swal.fire('Atenção', 'Informe uma quantidade válida maior que zero.', 'warning');
     const p = window.buscarProduto(busca);
     if (!p) return Swal.fire('Atenção', 'Produto não encontrado no estoque. Use "Item Avulso" para itens sem cadastro.', 'warning');
+    const tipoDoc = (document.getElementById('vendaTipoDoc') || {}).value || 'VENDA';
     const disp = window.calcularDisponivelEstoque(p, carrinhoVenda);
-    if (disp.livre < qtd - 1e-9) {
+    if (tipoDoc === 'VENDA' && disp.livre < qtd - 1e-9) {
         return Swal.fire('Estoque insuficiente',
             `Produto: ${p.nome}\nCadastro: ${window.formatQtdComUnidade(disp.cadastro, p.unidadeMedida)}\nNo carrinho: ${window.formatQtdComUnidade(disp.reservado, p.unidadeMedida)}\nDisponível: ${window.formatQtdComUnidade(Math.max(0, disp.livre), p.unidadeMedida)}`, 'warning');
     }
@@ -2134,11 +2144,7 @@ window.addItemOrc = function(tipo) {
         if (valorCobrado <= 0) return Swal.fire('Atenção','Informe o valor cobrado','warning');
         const p = window.buscarProduto(termo);
         if (!p) return Swal.fire('Atenção','Produto não encontrado no estoque','warning');
-        const disp = window.calcularDisponivelEstoque(p, carrinhoOrc);
-        if (qtd > disp.livre + 0.0001) {
-            return Swal.fire('Estoque insuficiente',
-                `Produto: ${p.nome}\nDisponível: ${window.formatQtdComUnidade(disp.livre, p.unidadeMedida)}`, 'warning');
-        }
+        // Orçamento: não exige estoque — só reserva a peça no orçamento. Baixa na conversão/venda.
         const ue = document.getElementById('orcUnidade').value ? window.normalizarUnidade(document.getElementById('orcUnidade').value) : window.normalizarUnidade(p.unidadeMedida);
         const nomeExibir = `${p.nome} (Cód: ${p.codigo||'-'}) — ${window.formatQtdComUnidade(qtd, ue)}`;
         carrinhoOrc.push({
