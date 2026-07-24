@@ -192,6 +192,7 @@
         <button class="menu-btn active" data-sec="secClientes"><span>👥</span> <span class="txt">Clientes</span></button>
         <div class="menu-grupo-titulo">Estoque / Vendas</div>
         <button class="menu-btn" data-sec="secProdutos"><span>📦</span> <span class="txt">Cadastrar Produtos</span></button>
+        <button class="menu-btn" data-sec="secServicos"><span>⚡</span> <span class="txt">Tabela Rebobinamento</span></button>
         <div class="menu-grupo-vendas" id="menuGrupoVendas">
             <button type="button" class="menu-btn menu-grupo-toggle" id="btnMenuVendas" aria-expanded="true">
                 <span>🛍️</span> <span class="txt">Vendas</span> <span class="menu-seta">▼</span>
@@ -321,6 +322,48 @@
             </div>
         </section>
 
+        <!-- TABELA REBOBINAMENTO / SERVIÇOS (sem código de barras) -->
+        <section id="secServicos" class="section">
+            <div class="card">
+                <h2 id="tituloServ">Tabela de Rebobinamento / Serviços</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">Cadastro <strong>só de mão de obra</strong> (sem código de barras). Ex.: Rebobinamento motor 3 CV — valor fixo. No orçamento você escolhe e o preço já vem.</p>
+                <form id="formServico">
+                    <div class="bloco">
+                        <div class="row">
+                            <div class="col" style="flex:2"><label>Nome do serviço</label><input id="servNome" required placeholder="Ex: Rebobinamento"></div>
+                            <div class="col"><label>Potência (CV)</label><input id="servPotencia" placeholder="3"></div>
+                            <div class="col"><label>Polos</label>
+                                <select id="servPolos">
+                                    <option value="2">2</option><option value="4">4</option>
+                                    <option value="6">6</option><option value="8">8</option><option value="">—</option>
+                                </select>
+                            </div>
+                            <div class="col"><label>Alimentação</label>
+                                <select id="servFase">
+                                    <option value="Monofásico">Monofásico</option>
+                                    <option value="Trifásico">Trifásico</option>
+                                    <option value="">—</option>
+                                </select>
+                            </div>
+                            <div class="col"><label>Valor cobrado (R$)</label><input type="number" step="0.01" id="servValor" required placeholder="380,00"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <button type="submit" class="btn-primary" id="btnSalvarServ">Salvar Serviço</button>
+                        <button type="button" class="btn-danger btn-sm" id="btnCancelServ" style="display:none" onclick="cancelarEdicaoServ()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card">
+                <h2>Serviços Cadastrados</h2>
+                <div class="toolbar"><input class="search" id="buscaServ" placeholder="Buscar rebobinamento..." oninput="renderServicos()"></div>
+                <div style="overflow-x:auto">
+                    <table><thead><tr><th>Descrição</th><th>CV</th><th>Polos</th><th>Fase</th><th>Valor</th><th>Ações</th></tr></thead>
+                    <tbody id="tbServicos"></tbody></table>
+                </div>
+            </div>
+        </section>
+
         <!-- ORÇAMENTOS — Motor elétrico (não automotivo) -->
         <section id="secOrcamentos" class="section">
             <div class="card">
@@ -391,11 +434,28 @@
                         <div class="col"><label>RPM (opc.)</label><input id="orcRpm" placeholder="Ex: 3500"></div>
                     </div>
                 </div>
+                <div class="bloco" style="border:1px solid rgba(241,196,15,.45)">
+                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">1. Rebobinamento / Mão de Obra (em cima — valor do serviço)</h3>
+                    <div class="row">
+                        <div class="col" style="flex:2"><label>Escolher da tabela (preço automático)</label>
+                            <select id="orcServCatalogo" onchange="aplicarServicoCatalogo()">
+                                <option value="">— Selecione rebobinamento cadastrado —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:8px">
+                        <div class="col" style="flex:2"><label>Descrição do serviço</label>
+                            <input id="orcServDesc" placeholder="Rebob. motor 0,75 cv 2 polos">
+                        </div>
+                        <div class="col"><label>Valor cobrado (R$)</label><input type="number" id="orcServValor" step="0.01" placeholder="410,00"></div>
+                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addItemOrc('servico')">+ Serviço</button></div>
+                    </div>
+                </div>
                 <div class="bloco">
-                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">Peças — Valor pago × Valor cobrado (como no caderno)</h3>
+                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">2. Peças / Rolamentos (embaixo — valor pago × valor cobrado)</h3>
                     <div class="row">
                         <div class="col" style="flex:2"><label>Peça do estoque (bipe)</label>
-                            <input id="orcProdBusca" class="campo-bipe" list="dlProdutos" placeholder="Ex: rolamento 6202, rotor, selo..." autocomplete="off"
+                            <input id="orcProdBusca" class="campo-bipe" list="dlProdutos" placeholder="Ex: rolamento 6202, rotor, selo, ventoinha..." autocomplete="off"
                                 oninput="atualizarResumoEstoqueOrc()" onchange="preencherProdOrc()">
                             <datalist id="dlProdutos"></datalist>
                         </div>
@@ -414,13 +474,6 @@
                         <div class="col" style="align-self:flex-end"><button type="button" class="btn-success" style="width:100%" onclick="addItemOrc('peca')">+ Peça</button></div>
                     </div>
                     <div id="orcEstoqueResumo" class="estoque-resumo"></div>
-                    <div class="row" style="margin-top:8px">
-                        <div class="col" style="flex:2"><label>Mão de Obra / Serviço (ex.: Rebob. motor)</label>
-                            <input id="orcServDesc" placeholder="Rebob. motor 0,75 cv 2 polos">
-                        </div>
-                        <div class="col"><label>Valor cobrado (R$)</label><input type="number" id="orcServValor" step="0.01" placeholder="410,00"></div>
-                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addItemOrc('servico')">+ Serviço</button></div>
-                    </div>
                 </div>
                 <div id="orcCarrinho"></div>
                 <div class="row" style="margin-top:8px;align-items:center">
@@ -489,11 +542,11 @@
                     <div class="row">
                         <div class="col">
                             <label>Destino Caixa (quando pago)</label>
-                            <select id="vendaTipoCaixa">
-                                <option value="MERCADO_PAGO">Peças/Rolamentos → Mercado Pago</option>
-                                <option value="PICPAY_EMP">Peças Fornecedor → PicPay Empresas</option>
-                                <option value="NUBANK">Mão de Obra → Nubank (Pessoal)</option>
-                                <option value="COMPLETA">Completa (Peças no MP + M.O. no Nubank)</option>
+                            <select id="vendaTipoCaixa" onchange="atualizarSplitCaixaUI()">
+                                <option value="COMPLETA">Completa: custo peças → MP | M.O.+lucro → Nubank</option>
+                                <option value="MERCADO_PAGO">Peças internet: custo → MP | lucro → Nubank</option>
+                                <option value="PICPAY_EMP">Fornecedor: custo → PicPay | lucro → Nubank</option>
+                                <option value="NUBANK">Só M.O. / pessoal → Nubank</option>
                             </select>
                         </div>
                         <div class="col"><label>Data</label><input type="date" id="vendaData"></div>
@@ -511,12 +564,6 @@
                                 <option value="6">6</option><option value="8">8</option><option value="">—</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label>
-                            <input id="vendaMotor" placeholder="Ex: Rebob. motor 0,75 cv 2 polos">
-                        </div>
-                        <div class="col"><label>Nº Série</label><input id="vendaSerie" placeholder="Opcional"></div>
                         <div class="col"><label>Alimentação</label>
                             <select id="vendaFase">
                                 <option value="Monofásico">Monofásico</option>
@@ -525,10 +572,43 @@
                             </select>
                         </div>
                     </div>
+                    <div class="row" style="margin-bottom:6px">
+                        <div class="col">
+                            <label>Atalhos CV</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetVenda('0,75','2')">0,75 CV</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetVenda('1','2')">1 CV</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetVenda('2','2')">2 CV</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetVenda('3','2')">3 CV</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label>
+                            <input id="vendaMotor" placeholder="Ex: Rebob. motor 0,75 cv 2 polos">
+                        </div>
+                        <div class="col"><label>Nº Série</label><input id="vendaSerie" placeholder="Opcional"></div>
+                    </div>
+                </div>
+
+                <div class="bloco" style="border:1px solid rgba(241,196,15,.45)">
+                    <h3 style="margin:0 0 8px;font-size:13px;color:var(--gold)">1. Rebobinamento (em cima — escolha da tabela e valor cobrado)</h3>
+                    <div class="row">
+                        <div class="col" style="flex:2"><label>Tabela de rebobinamento</label>
+                            <select id="vendaServCatalogo" onchange="aplicarServicoCatalogoVenda()">
+                                <option value="">— Selecione rebobinamento cadastrado —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:8px">
+                        <div class="col" style="flex:2"><label>Descrição</label><input id="vendaRebDesc" placeholder="Rebob. motor 0,75 cv 2 polos"></div>
+                        <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaRebValor" placeholder="410,00"></div>
+                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addAoCarrinhoVenda_Rebob()">+ ADD Rebob.</button></div>
+                    </div>
                 </div>
 
                 <div class="bloco">
-                    <h3 style="margin:0 0 8px;font-size:13px;color:var(--gold)">1. Estoque — Bipe ou busque</h3>
+                    <h3 style="margin:0 0 8px;font-size:13px;color:var(--gold)">2. Peças / Rolamentos — Bipe ou busque</h3>
                     <div class="row">
                         <div class="col" style="flex:2">
                             <input id="vendaProdBusca" class="campo-bipe" list="dlProdutosVenda" placeholder="Bipe código ou nome..."
@@ -555,7 +635,7 @@
                 </div>
 
                 <div class="bloco" style="border-color:rgba(231,76,60,.5)">
-                    <h3 style="margin:0 0 8px;font-size:13px;color:#e74c3c">2. Item Avulso (sem estoque)</h3>
+                    <h3 style="margin:0 0 8px;font-size:13px;color:#e74c3c">3. Item Avulso (sem estoque)</h3>
                     <div class="row">
                         <div class="col" style="flex:2"><input id="vendaAvulsoNome" placeholder="Descrição avulsa..."></div>
                         <div class="col"><label>Qtd</label><input id="vendaAvulsoQtd" value="1" inputmode="decimal"></div>
@@ -565,8 +645,8 @@
                 </div>
 
                 <div class="row" style="align-items:flex-end">
-                    <div class="col" style="flex:2"><label>3. Mão de Obra / Serviço</label><input id="vendaMODesc" placeholder="Rebob. motor 0,75 cv 2 polos..."></div>
-                    <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaMOValor" placeholder="410,00"></div>
+                    <div class="col" style="flex:2"><label>4. Mão de Obra extra (opcional)</label><input id="vendaMODesc" placeholder="Serviço extra no motor..."></div>
+                    <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaMOValor"></div>
                     <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addAoCarrinhoVenda_MO()">+ Serv</button></div>
                 </div>
             </div>
@@ -574,6 +654,7 @@
             <div class="card">
                 <h2>Carrinho</h2>
                 <div id="listaCarrinhoVenda"><p style="color:var(--muted);font-size:12px">Nenhum item.</p></div>
+                <div id="vendaSplitCaixa" class="estoque-resumo" style="display:none;margin-top:10px"></div>
                 <div class="bloco" style="margin-top:12px">
                     <div class="row">
                         <div class="col"><label>Desconto R$</label><input type="number" step="0.01" id="vendaDescReais" value="0" oninput="calcularTotalVenda()"></div>
@@ -589,7 +670,7 @@
                     </div>
                 </div>
                 <div class="col" style="margin-top:10px"><label>Observações</label><textarea id="vendaObs" rows="2"></textarea></div>
-                <div style="display:flex;gap:10px;margin-top:14px">
+                <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
                     <button type="button" class="btn-success" style="flex:1;padding:14px;font-size:15px" onclick="finalizarVenda()">✅ FINALIZAR E SALVAR</button>
                     <button type="button" class="btn-danger" id="btnCancelarEdicaoVenda" style="display:none;padding:14px" onclick="cancelarEdicaoVenda()">Cancelar Edição</button>
                 </div>
@@ -620,9 +701,9 @@
             <div class="card">
                 <h2>Controle de Caixas da Empresa</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    <strong>Mercado Pago</strong> = peças de internet e rolamentos &nbsp;|&nbsp;
-                    <strong>PicPay Empresas</strong> = contas/boletos de fornecedores &nbsp;|&nbsp;
-                    <strong>Nubank</strong> = controle pessoal / mão de obra (aba Despesas Pessoais)
+                    <strong>Mercado Pago</strong> = reposição do custo das peças/rolamentos &nbsp;|&nbsp;
+                    <strong>Nubank</strong> = mão de obra (rebobinamento) + lucro das peças &nbsp;|&nbsp;
+                    <strong>PicPay Empresas</strong> = compras/boletos de fornecedor (capacitor, ventoinha…)
                 </p>
                 <div class="tabs-caixa">
                     <div class="tab-caixa ml active" data-conta="mercadopago" onclick="selecionarCaixa('mercadopago',this)">🤝 Mercado Pago (Peças)</div>
@@ -638,6 +719,12 @@
                     <button class="btn-entrada" onclick="abrirModalLanc('ENTRADA')">➕ Entrada</button>
                     <button class="btn-saida" onclick="abrirModalLanc('SAIDA')">➖ Saída</button>
                     <button class="btn-gold btn-sm" onclick="definirSaldoInicial()">💰 Saldo Inicial</button>
+                    <button class="btn-info btn-sm" onclick="fechamentoCaixaDia()">📅 Fechamento do Dia</button>
+                </div>
+                <div class="card" id="painelFechamentoDia" style="display:none;margin-top:12px;background:var(--panel-dark)">
+                    <h2 style="font-size:14px">Fechamento do Caixa — Hoje</h2>
+                    <div id="conteudoFechamentoDia"></div>
+                    <button type="button" class="btn-info btn-sm" style="margin-top:8px" onclick="imprimirFechamentoDia()">🖨️ Imprimir fechamento</button>
                 </div>
                 <div class="toolbar"><input class="search" id="buscaCaixa" placeholder="Buscar lançamento..." oninput="renderExtratoCaixa()"></div>
                 <div style="overflow-x:auto">
@@ -793,10 +880,10 @@
         <select id="convStatus"><option value="PAGO">✅ Pago</option><option value="PENDENTE">⏳ Pendente (Contas a Receber)</option></select>
         <label>Tipo de Venda (define caixa)</label>
         <select id="convTipoVenda">
-            <option value="MERCADO_PAGO">Peças/Rolamentos → Mercado Pago</option>
-            <option value="PICPAY_EMP">Peças Fornecedor → PicPay Empresas</option>
-            <option value="NUBANK">Mão de Obra → Nubank (Pessoal)</option>
-            <option value="COMPLETA">Completa (Peças no MP + M.O. no Nubank)</option>
+            <option value="COMPLETA">Completa: custo peças → MP | M.O.+lucro → Nubank</option>
+            <option value="MERCADO_PAGO">Peças internet: custo → MP | lucro → Nubank</option>
+            <option value="PICPAY_EMP">Fornecedor: custo → PicPay | lucro → Nubank</option>
+            <option value="NUBANK">Só M.O. / pessoal → Nubank</option>
         </select>
         <label>Forma de Pagamento</label>
         <select id="convFormaPgto">
@@ -876,7 +963,7 @@ const LS_KEY = 'fhmotores_dados';
 
 function storeDefault() {
     return {
-        clientes: {}, produtos: {}, documentos: {},
+        clientes: {}, produtos: {}, servicos: {}, documentos: {},
         contas: {
             mercadopago: { extrato: {}, status: { saldoInicial: 0 } },
             picpayempresas: { extrato: {}, status: { saldoInicial: 0 } },
@@ -1000,12 +1087,12 @@ async function dbGet(path) {
 }
 
 // ==================== GLOBAIS ====================
-let clientes = [], produtos = [], documentos = [];
+let clientes = [], produtos = [], servicos = [], documentos = [];
 let extratos = { mercadopago: [], picpayempresas: [], nubank: [] };
 let saldosIniciais = { mercadopago: 0, picpayempresas: 0, nubank: 0 };
 let pessoalExtrato = [], motores = [], motorAtivoId = null;
 let docsAnexos = [];
-let editandoCliId = null, editandoProdId = null, editandoOrcId = null, editandoVendaId = null;
+let editandoCliId = null, editandoProdId = null, editandoServId = null, editandoOrcId = null, editandoVendaId = null;
 let carrinhoOrc = [], carrinhoVenda = [], contaCaixaAtiva = 'mercadopago';
 let empresa = { nome: 'FH MOTORES' };
 
@@ -1015,10 +1102,10 @@ const agora = () => new Date().toLocaleString('pt-BR');
 
 function rotuloCaixaVenda(tipo) {
     const map = {
-        MERCADO_PAGO: 'Mercado Pago',
-        PICPAY_EMP: 'PicPay Emp.',
+        MERCADO_PAGO: 'MP custo + Nubank lucro',
+        PICPAY_EMP: 'PicPay custo + Nubank lucro',
         NUBANK: 'Nubank',
-        COMPLETA: 'MP + Nubank',
+        COMPLETA: 'MP custo + Nubank M.O./lucro',
         APENAS_PECAS: 'PicPay Emp.',
         APENAS_MO: 'Nubank'
     };
@@ -1029,6 +1116,7 @@ function refreshFromStore() {
     store = loadStore();
     clientes = objToList(store.clientes).sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
     produtos = objToList(store.produtos);
+    servicos = objToList(store.servicos || {}).sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
     documentos = objToList(store.documentos).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
     ['mercadopago','picpayempresas','nubank'].forEach(conta => {
         extratos[conta] = objToList(getNested(store, 'contas/'+conta+'/extrato')).sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
@@ -1057,10 +1145,11 @@ function refreshFromStore() {
     docsAnexos = objToList(store.docsAnexos).sort((a,b) => (a.vencimento||'').localeCompare(b.vencimento||''));
     renderDocumentos();
     monitorarVencimentosDocumentos();
-    renderClientes(); renderProdutos(); renderOrcamentos(); renderVendas();
+    renderClientes(); renderProdutos(); renderServicos(); renderOrcamentos(); renderVendas();
     renderExtratoCaixa(); atualizarDashCaixa(); renderPessoal(); renderMotores();
     if (motorAtivoId) renderMotorDetalhe();
     atualizarDatalists();
+    atualizarSelectServicosOrc();
 }
 
 function mascaraTel(el) {
@@ -1339,6 +1428,99 @@ function renderProdutos() {
 }
 window.renderProdutos = renderProdutos;
 
+// ==================== TABELA REBOBINAMENTO / SERVIÇOS ====================
+function descServicoItem(s) {
+    let p = [s.nome || 'Rebobinamento'];
+    if (s.potencia) p.push(String(s.potencia).replace('.', ',') + ' cv');
+    if (s.polos) p.push(s.polos + ' polos');
+    if (s.fase) p.push(String(s.fase).toLowerCase());
+    return p.join(' ');
+}
+
+function atualizarSelectServicosOrc() {
+    const opts = '<option value="">— Selecione rebobinamento cadastrado —</option>' +
+        servicos.map(s => `<option value="${s.id}">${descServicoItem(s)} — ${fmt(s.valor)}</option>`).join('');
+    const sel = document.getElementById('orcServCatalogo');
+    if (sel) { const cur = sel.value; sel.innerHTML = opts; if (cur) sel.value = cur; }
+    const selV = document.getElementById('vendaServCatalogo');
+    if (selV) { const cur = selV.value; selV.innerHTML = opts; if (cur) selV.value = cur; }
+}
+
+window.aplicarServicoCatalogo = function() {
+    const id = document.getElementById('orcServCatalogo').value;
+    const s = servicos.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('orcServDesc').value = descServicoItem(s);
+    document.getElementById('orcServValor').value = (parseFloat(s.valor) || 0).toFixed(2);
+    if (s.potencia) document.getElementById('orcPotencia').value = s.potencia;
+    if (s.polos) document.getElementById('orcPolos').value = s.polos;
+    if (s.fase) document.getElementById('orcFase').value = s.fase;
+    document.getElementById('orcTipoServico').value = 'Rebobinamento';
+    const motorEl = document.getElementById('orcMotor');
+    if (motorEl) { motorEl.dataset.manual = '0'; atualizarDescMotorOrc(); motorEl.value = descServicoItem(s); motorEl.dataset.manual = '1'; }
+};
+
+document.getElementById('formServico').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = {
+        nome: document.getElementById('servNome').value.trim() || 'Rebobinamento',
+        potencia: document.getElementById('servPotencia').value.trim(),
+        polos: document.getElementById('servPolos').value,
+        fase: document.getElementById('servFase').value,
+        valor: parseFloat(document.getElementById('servValor').value) || 0
+    };
+    if (d.valor <= 0) return Swal.fire('Atenção', 'Informe o valor cobrado do serviço', 'warning');
+    try {
+        if (editandoServId) { await dbSet('servicos/' + editandoServId, d); cancelarEdicaoServ(); }
+        else { await dbPush('servicos', d); document.getElementById('formServico').reset(); document.getElementById('servPolos').value = '2'; document.getElementById('servFase').value = 'Monofásico'; }
+        Swal.fire({ icon: 'success', title: 'Serviço salvo!', timer: 1200, showConfirmButton: false });
+    } catch (err) { Swal.fire('Erro', err.message, 'error'); }
+});
+
+window.cancelarEdicaoServ = function() {
+    editandoServId = null;
+    document.getElementById('formServico').reset();
+    document.getElementById('servPolos').value = '2';
+    document.getElementById('servFase').value = 'Monofásico';
+    document.getElementById('btnCancelServ').style.display = 'none';
+    document.getElementById('tituloServ').textContent = 'Tabela de Rebobinamento / Serviços';
+};
+
+window.editarServ = function(id) {
+    const s = servicos.find(x => x.id === id); if (!s) return;
+    editandoServId = id;
+    document.getElementById('servNome').value = s.nome || '';
+    document.getElementById('servPotencia').value = s.potencia || '';
+    document.getElementById('servPolos').value = s.polos || '';
+    document.getElementById('servFase').value = s.fase || '';
+    document.getElementById('servValor').value = s.valor || 0;
+    document.getElementById('btnCancelServ').style.display = 'inline-block';
+    document.getElementById('tituloServ').textContent = 'Editando serviço';
+    abrirSecao('secServicos', document.querySelector('[data-sec=secServicos]'));
+};
+
+window.excluirServ = async function(id) {
+    if (!(await Swal.fire({ title: 'Excluir serviço?', icon: 'warning', showCancelButton: true })).isConfirmed) return;
+    await dbRemove('servicos/' + id);
+};
+
+function renderServicos() {
+    const busca = (document.getElementById('buscaServ')?.value || '').toLowerCase();
+    const tb = document.getElementById('tbServicos'); if (!tb) return;
+    tb.innerHTML = '';
+    servicos.filter(s => !busca || descServicoItem(s).toLowerCase().includes(busca))
+    .forEach(s => {
+        tb.innerHTML += `<tr>
+            <td>${descServicoItem(s)}</td><td>${s.potencia||'-'}</td><td>${s.polos||'-'}</td>
+            <td>${s.fase||'-'}</td><td style="color:#2ecc71;font-weight:bold">${fmt(s.valor)}</td>
+            <td class="acoes">
+                <button class="btn-acao" onclick="editarServ('${s.id}')">✏️</button>
+                <button class="btn-acao" onclick="excluirServ('${s.id}')">🗑️</button>
+            </td></tr>`;
+    });
+}
+window.renderServicos = renderServicos;
+
 function atualizarDatalists() {
     const optsCli = clientes.map(c => `<option value="${c.nome}">`).join('');
     document.getElementById('dlClientes').innerHTML = optsCli;
@@ -1588,6 +1770,70 @@ window.addAoCarrinhoVenda_MO = function() {
     renderCarrinhoVenda();
 };
 
+window.aplicarPresetVenda = function(cv, polos) {
+    document.getElementById('vendaPotencia').value = cv;
+    document.getElementById('vendaPolos').value = String(polos);
+    const fase = document.getElementById('vendaFase').value || 'Monofásico';
+    const desc = `Rebob. motor ${cv} cv ${polos} polos ${fase.toLowerCase()}`;
+    document.getElementById('vendaMotor').value = desc;
+    document.getElementById('vendaRebDesc').value = desc;
+};
+
+window.aplicarServicoCatalogoVenda = function() {
+    const id = document.getElementById('vendaServCatalogo').value;
+    const s = servicos.find(x => x.id === id);
+    if (!s) return;
+    const desc = descServicoItem(s);
+    document.getElementById('vendaRebDesc').value = desc;
+    document.getElementById('vendaRebValor').value = (parseFloat(s.valor) || 0).toFixed(2);
+    document.getElementById('vendaMotor').value = desc;
+    if (s.potencia) document.getElementById('vendaPotencia').value = s.potencia;
+    if (s.polos) document.getElementById('vendaPolos').value = s.polos;
+    if (s.fase) document.getElementById('vendaFase').value = s.fase;
+};
+
+window.addAoCarrinhoVenda_Rebob = function() {
+    const d = (document.getElementById('vendaRebDesc').value || document.getElementById('vendaMotor').value || '').trim();
+    const v = parseFloat(document.getElementById('vendaRebValor').value);
+    if (!d || isNaN(v) || v <= 0) return Swal.fire('Atenção', 'Informe a descrição e o valor cobrado do rebobinamento', 'warning');
+    carrinhoVenda.push({ nome: `[M.O.] ${d}`, valor: v, valorOriginal: v, ehEstoque: false, categoriaOS: 'servico' });
+    document.getElementById('vendaRebDesc').value = '';
+    document.getElementById('vendaRebValor').value = '';
+    const cat = document.getElementById('vendaServCatalogo'); if (cat) cat.value = '';
+    renderCarrinhoVenda();
+};
+
+function calcSplitCaixaVenda() {
+    let totalPecasCobrado = 0, totalPecasCusto = 0, totalMO = 0;
+    carrinhoVenda.forEach(i => {
+        const cobrado = i.valor || 0;
+        const custo = Number(i.custoOriginal != null ? (i.custoOriginal * (i.qtdBaixa || 1)) : 0) || 0;
+        const ehServ = (i.categoriaOS || '') === 'servico' || String(i.nome || '').includes('[M.O.]');
+        if (ehServ) totalMO += cobrado;
+        else { totalPecasCobrado += cobrado; totalPecasCusto += custo; }
+    });
+    const lucro = Math.max(0, totalPecasCobrado - totalPecasCusto);
+    return { totalPecasCobrado, totalPecasCusto, totalMO, lucro };
+}
+
+function atualizarSplitCaixaUI() {
+    const box = document.getElementById('vendaSplitCaixa'); if (!box) return;
+    if (!carrinhoVenda.length) { box.style.display = 'none'; return; }
+    const tipo = document.getElementById('vendaTipoCaixa')?.value || 'COMPLETA';
+    const s = calcSplitCaixaVenda();
+    let html = '<strong>Divisão do caixa (quando PAGO):</strong><br>';
+    if (tipo === 'NUBANK') {
+        html += `💜 Nubank: ${fmt(s.totalMO + s.totalPecasCobrado)} (tudo pessoal/M.O.)`;
+    } else if (tipo === 'PICPAY_EMP') {
+        html += `🏢 PicPay Emp.: ${fmt(s.totalPecasCusto)} (custo peças)<br>💜 Nubank: ${fmt(s.totalMO + s.lucro)} (rebobinamento + lucro)`;
+    } else {
+        html += `🤝 Mercado Pago: ${fmt(s.totalPecasCusto)} (custo/reposição peças)<br>💜 Nubank: ${fmt(s.totalMO + s.lucro)} (rebobinamento + lucro peças)`;
+    }
+    html += `<br><span style="color:#f1c40f">Cliente paga o TOTAL cobrado — o sistema NÃO joga o valor inteiro só num caixa.</span>`;
+    box.innerHTML = html; box.style.display = 'block';
+}
+window.atualizarSplitCaixaUI = atualizarSplitCaixaUI;
+
 window.removerItemCarrinhoVenda = function(i) { carrinhoVenda.splice(i, 1); renderCarrinhoVenda(); };
 
 window.editarItemCarrinhoVenda = function(idx) {
@@ -1634,12 +1880,13 @@ function renderCarrinhoVenda() {
             if ((item.categoriaOS || '') === 'servico') servs.push(row); else mats.push(row);
         });
         let html = '';
-        if (mats.length) html += `<div style="font-weight:bold;color:var(--gold);margin:8px 0 4px">PRODUTOS / MATERIAIS</div>` + mats.join('');
-        if (servs.length) html += `<div style="font-weight:bold;color:var(--gold);margin:12px 0 4px">MÃO DE OBRA / SERVIÇOS</div>` + servs.join('');
+        if (servs.length) html += `<div style="font-weight:bold;color:var(--gold);margin:8px 0 4px">REBOBINAMENTO / MÃO DE OBRA</div>` + servs.join('');
+        if (mats.length) html += `<div style="font-weight:bold;color:var(--gold);margin:12px 0 4px">PRODUTOS / MATERIAIS</div>` + mats.join('');
         div.innerHTML = html;
     }
     calcularTotalVenda();
     window.atualizarResumoEstoqueVenda();
+    atualizarSplitCaixaUI();
 }
 
 window.calcularTotalVenda = function() {
@@ -1652,6 +1899,7 @@ window.calcularTotalVenda = function() {
     const st = document.getElementById('vendaSubtotalTxt'); if (st) st.textContent = fmt(subtotal);
     const tf = document.getElementById('vendaTotalFinalTxt'); if (tf) tf.textContent = 'TOTAL: ' + fmt(totalFinal);
     const tr = document.getElementById('vendaTrocoTxt'); if (tr) tr.textContent = 'Troco: ' + fmt(troco);
+    atualizarSplitCaixaUI();
     return totalFinal;
 };
 
@@ -1675,6 +1923,9 @@ window.limparFormVenda = async function() {
     document.getElementById('vendaDescPerc').value = '0';
     document.getElementById('vendaValorRecebido').value = '';
     document.getElementById('vendaObs').value = '';
+    const rebD = document.getElementById('vendaRebDesc'); if (rebD) rebD.value = '';
+    const rebV = document.getElementById('vendaRebValor'); if (rebV) rebV.value = '';
+    const rebC = document.getElementById('vendaServCatalogo'); if (rebC) rebC.value = '';
     document.getElementById('vendaNumero').value = await gerarNumVenda();
     document.getElementById('btnCancelarEdicaoVenda').style.display = 'none';
     renderCarrinhoVenda();
@@ -1810,9 +2061,20 @@ window.finalizarVenda = async function() {
         }
 
         const titulo = tipoDoc === 'VENDA' ? 'Venda salva!' : 'Orçamento salvo!';
+        const foiPago = tipoDoc === 'VENDA' && status === 'PAGO';
+        const idSalvo = docId;
         await window.limparFormVenda();
         renderOrcamentos(); renderVendas();
-        Swal.fire({ icon: 'success', title: titulo, timer: 2000, showConfirmButton: false });
+        if (foiPago) {
+            const r = await Swal.fire({
+                icon: 'success', title: titulo,
+                text: 'Deseja abrir o comprovante pago para enviar no WhatsApp?',
+                showCancelButton: true, confirmButtonText: '📄 Comprovante', cancelButtonText: 'Fechar'
+            });
+            if (r.isConfirmed) window.comprovantePago(idSalvo);
+        } else {
+            Swal.fire({ icon: 'success', title: titulo, timer: 2000, showConfirmButton: false });
+        }
     } catch (err) {
         Swal.fire('Erro', err.message, 'error');
     } finally {
@@ -1866,21 +2128,27 @@ window.removerItemOrc = function(i) { carrinhoOrc.splice(i,1); renderCarrinhoOrc
 function renderCarrinhoOrc() {
     const el = document.getElementById('orcCarrinho');
     if (!carrinhoOrc.length) {
-        el.innerHTML = '<p style="color:var(--muted);font-size:12px">Nenhum item — adicione serviço e peças como no caderno.</p>';
+        el.innerHTML = '<p style="color:var(--muted);font-size:12px">Nenhum item — 1º rebobinamento em cima, 2º peças/rolamentos embaixo.</p>';
         document.getElementById('orcTotal').textContent = 'TOTAL: R$ 0,00';
         const c = document.getElementById('orcCustoTotal'); if (c) c.textContent = 'Custo peças (pago): R$ 0,00';
         const l = document.getElementById('orcLucroTxt'); if (l) l.textContent = 'Lucro estimado: R$ 0,00';
         return;
     }
     let total = 0, totalPago = 0;
-    el.innerHTML = carrinhoOrc.map((it,i) => {
+    const servs = [], pecas = [];
+    carrinhoOrc.forEach((it, i) => {
         total += it.total || 0;
         totalPago += it.totalPago || ((it.valorPago || it.custoOriginal || 0) * (it.qtd || 1));
         const ehServ = it.tipo === 'servico';
         const extra = ehServ ? '' : ` <small style="color:#95a5a6">(pago ${fmt(it.valorPago || it.custoOriginal || 0)})</small>`;
-        return `<div class="cart-item"><span>${ehServ ? '' : (it.qtd + 'x ')}${it.nome}${extra} — <strong>${fmt(it.total)}</strong></span>
+        const row = `<div class="cart-item"><span>${ehServ ? '' : (it.qtd + 'x ')}${it.nome}${extra} — <strong>${fmt(it.total)}</strong></span>
         <button class="btn-acao" onclick="removerItemOrc(${i})">🗑️</button></div>`;
-    }).join('');
+        if (ehServ) servs.push(row); else pecas.push(row);
+    });
+    let html = '';
+    if (servs.length) html += `<div style="font-weight:bold;color:var(--gold);margin:6px 0 4px">REBOBINAMENTO / MÃO DE OBRA</div>` + servs.join('');
+    if (pecas.length) html += `<div style="font-weight:bold;color:var(--gold);margin:12px 0 4px">PEÇAS / ROLAMENTOS</div>` + pecas.join('');
+    el.innerHTML = html;
     const lucro = total - totalPago;
     document.getElementById('orcTotal').textContent = 'TOTAL: ' + fmt(total);
     const c = document.getElementById('orcCustoTotal'); if (c) c.textContent = 'Custo peças (pago): ' + fmt(totalPago);
@@ -2086,43 +2354,58 @@ window.confirmarConversao = async function() {
         await dbSet('documentos/'+id, novoDoc);
         fecharModal('modalConverter');
         renderOrcamentos(); renderVendas();
-        Swal.fire({ icon:'success', title:'Venda concluída!', text:'Orçamento convertido com baixa de estoque. Veja em Vendas Concluídas.', timer:2500, showConfirmButton:false });
+        if (status === 'PAGO') {
+            const r = await Swal.fire({
+                icon: 'success', title: 'Venda concluída!',
+                text: 'Deseja abrir o comprovante pago para enviar no WhatsApp?',
+                showCancelButton: true, confirmButtonText: '📄 Comprovante', cancelButtonText: 'Ir para Vendas'
+            });
+            if (r.isConfirmed) window.comprovantePago(id);
+        } else {
+            Swal.fire({ icon:'success', title:'Venda concluída!', text:'Orçamento convertido. Veja em Vendas Concluídas.', timer:2500, showConfirmButton:false });
+        }
         abrirSecao('secVendas', document.querySelector('[data-sec=secVendas]'));
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
 };
 
 async function lancarVendaNasCaixas(doc, tipoVenda) {
     const itens = doc.itens || [];
-    let totalPecas = 0, totalMO = 0;
+    let totalPecasCobrado = 0, totalPecasCusto = 0, totalMO = 0;
     itens.forEach(i => {
-        const val = i.total || i.valor || 0;
+        const cobrado = i.total || i.valor || 0;
+        const custo = Number(i.totalPago != null ? i.totalPago : ((i.valorPago ?? i.custoOriginal ?? 0) * (i.qtd || i.qtdBaixa || 1))) || 0;
         const ehServ = i.tipo === 'servico' || i.categoriaOS === 'servico' || (i.nome || '').includes('[M.O.]') || (i.nome || '').includes('[Mão de Obra]');
-        if (ehServ) totalMO += val; else totalPecas += val;
+        if (ehServ) totalMO += cobrado;
+        else { totalPecasCobrado += cobrado; totalPecasCusto += custo; }
     });
-
-    const desc = `Venda #${doc.numero} — ${doc.clienteNome}`;
-    const lancar = async (conta, valor, descExtra) => {
+    const lucroPecas = Math.max(0, totalPecasCobrado - totalPecasCusto);
+    const num = doc.numeroFmt || doc.numero;
+    const desc = `Venda #${num} — ${doc.clienteNome}`;
+    const lancar = async (conta, valor, descExtra, categoria) => {
         if (valor <= 0) return;
         await dbPush(`contas/${conta}/extrato`, {
             tipo: 'ENTRADA', descricao: desc + (descExtra||''), valor,
-            categoria: 'RECEITA_VENDA',
+            categoria: categoria || 'RECEITA_VENDA',
             dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda'
         });
     };
 
-    // Compatibilidade com valores antigos
     if (tipoVenda === 'APENAS_PECAS') tipoVenda = 'PICPAY_EMP';
     if (tipoVenda === 'APENAS_MO') tipoVenda = 'NUBANK';
 
+    // Regra Halana: NÃO joga o valor inteiro das peças no MP.
+    // MP/PicPay = reposição do CUSTO das peças | Nubank = M.O. + LUCRO das peças
     if (tipoVenda === 'PICPAY_EMP') {
-        await lancar('picpayempresas', totalPecas + totalMO, ' (peças fornecedor)');
+        await lancar('picpayempresas', totalPecasCusto, ' (custo peça fornecedor)', 'CUSTO_PECA');
+        await lancar('nubank', totalMO + lucroPecas, ' (M.O. + lucro peças)', 'MAO_DE_OBRA');
     } else if (tipoVenda === 'NUBANK') {
-        await lancar('nubank', totalPecas + totalMO, ' (mão de obra/pessoal)');
+        await lancar('nubank', totalMO + totalPecasCobrado, ' (mão de obra/pessoal)', 'MAO_DE_OBRA');
     } else if (tipoVenda === 'MERCADO_PAGO') {
-        await lancar('mercadopago', totalPecas + totalMO, ' (peças internet/rolamentos)');
+        await lancar('mercadopago', totalPecasCusto, ' (custo peças/rolamentos)', 'CUSTO_PECA');
+        await lancar('nubank', totalMO + lucroPecas, ' (M.O. + lucro peças)', 'MAO_DE_OBRA');
     } else { // COMPLETA
-        if (totalPecas > 0) await lancar('mercadopago', totalPecas, ' (peças)');
-        if (totalMO > 0) await lancar('nubank', totalMO, ' (mão de obra)');
+        await lancar('mercadopago', totalPecasCusto, ' (custo peças)', 'CUSTO_PECA');
+        await lancar('nubank', totalMO + lucroPecas, ' (rebobinamento + lucro peças)', 'MAO_DE_OBRA');
     }
 }
 
@@ -2140,6 +2423,7 @@ function renderOrcamentos() {
                 <button class="btn-acao" onclick="editarOrc('${d.id}')">✏️ Editar</button>
                 <button class="btn-acao" style="background:#27ae60;color:#fff" onclick="abrirConverter('${d.id}')">✅ Converter Venda</button>
                 <button class="btn-acao" onclick="imprimirOrcamentoAtual('${d.id}')">🖨️</button>
+                <button class="btn-acao" onclick="visualizarNota('${d.id}')">👁️</button>
                 <button class="btn-acao" onclick="excluirDoc('${d.id}')">🗑️</button>
             </td></tr>`;
     });
@@ -2171,12 +2455,121 @@ function renderVendas() {
             <td>${d.numeroFmt||d.numero}</td><td>${d.dataConversao||d.data||'-'}</td><td>${d.clienteNome}</td>
             <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td><td>${st}</td><td>${cx}</td>
             <td class="acoes">
+                <button class="btn-acao" onclick="visualizarNota('${d.id}')" title="Visualizar / Imprimir">👁️</button>
+                ${d.statusPagamento === 'PAGO' ? `<button class="btn-acao" style="background:#27ae60;color:#fff" onclick="comprovantePago('${d.id}')" title="Comprovante pago (WhatsApp)">📄</button>` : ''}
                 <button class="btn-acao" onclick="editarVenda('${d.id}')">✏️</button>
                 <button class="btn-acao" onclick="excluirDoc('${d.id}')">🗑️</button>
             </td></tr>`;
     });
 }
 window.renderVendas = renderVendas;
+
+window.comprovantePago = function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return Swal.fire('Atenção', 'Documento não encontrado', 'warning');
+    if (d.statusPagamento !== 'PAGO') return Swal.fire('Atenção', 'Só há comprovante para vendas pagas.', 'info');
+    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
+    const empTel = (empresa && (empresa.telefone || empresa.whatsapp)) || '';
+    const logo = (empresa && empresa.logo) || '';
+    let linhas = '';
+    (d.itens || []).forEach(it => {
+        const ehServ = it.tipo === 'servico' || it.categoriaOS === 'servico' || String(it.nome || '').includes('[M.O.]');
+        linhas += `<tr>
+            <td>${ehServ ? 'Serviço' : 'Peça'}</td>
+            <td>${String(it.nome || '').replace(/^\[M\.O\.\]\s*/, '')}</td>
+            <td style="text-align:center">${it.qtd || it.qtdBaixa || 1}</td>
+            <td style="text-align:right">${fmt(it.total || it.valor || 0)}</td>
+        </tr>`;
+    });
+    const motorTxt = descMotorDoc(d) || '';
+    const textoWa = `*${empNome}* — COMPROVANTE PAGO\nVenda n. ${d.numeroFmt||d.numero}\nCliente: ${d.clienteNome||'-'}\nData: ${d.dataConversao||d.data||'-'} · ${d.formaPagamento||'-'}\n${motorTxt ? 'Serviço: '+motorTxt+'\n' : ''}*TOTAL: ${fmt(d.total)}*\nStatus: PAGO ✓`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Comprovante PAGO ${d.numeroFmt||d.numero}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#111;padding:20px;max-width:420px;margin:auto;background:#f7f7f7}
+      .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+      h1{margin:0;font-size:18px} .ok{display:inline-block;margin:10px 0;padding:8px 14px;background:#27ae60;color:#fff;border-radius:8px;font-weight:bold;font-size:16px;letter-spacing:.5px}
+      .muted{color:#666;font-size:12px;line-height:1.4} table{width:100%;border-collapse:collapse;margin-top:12px}
+      th,td{padding:8px 4px;border-bottom:1px solid #eee;font-size:13px;text-align:left} th{color:#555;font-size:11px;text-transform:uppercase}
+      .tot{font-size:22px;font-weight:bold;text-align:right;margin-top:14px;color:#155724}
+      img{max-height:56px} .acoes{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+      .acoes button{flex:1;min-width:120px;padding:12px;border:0;border-radius:8px;font-weight:bold;cursor:pointer}
+      .print{background:#0d3b66;color:#fff} .wa{background:#25D366;color:#fff}
+      @media print{body{background:#fff;padding:0}.acoes{display:none}.card{box-shadow:none}}
+    </style></head><body><div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div>${logo?`<img src="${logo}" alt="logo"><br>`:''}<h1>${empNome}</h1>
+      <div class="muted">${empTel}</div></div>
+    <div class="ok">✓ PAGO</div>
+    <div class="muted">Comprovante de pagamento<br>
+    Venda n. <strong>${d.numeroFmt||d.numero}</strong><br>
+    Data: ${d.dataConversao||d.data||'-'} · ${d.formaPagamento||'-'}<br>
+    Cliente: <strong>${d.clienteNome||'-'}</strong><br>
+    ${motorTxt ? ('Serviço: <strong>'+motorTxt+'</strong>') : ''}
+    </div>
+    <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Valor</th></tr></thead>
+    <tbody>${linhas}</tbody></table>
+    <div class="tot">TOTAL: ${fmt(d.total)}</div>
+    <p class="muted" style="margin-top:16px;text-align:center">Obrigado pela preferência!</p>
+    <div class="acoes">
+      <button class="print" onclick="window.print()">🖨️ Imprimir / PDF</button>
+      <button class="wa" onclick="compartilhar()">📲 WhatsApp</button>
+    </div></div>
+    <script>
+    var textoWa = ${JSON.stringify(textoWa)};
+    function compartilhar(){ window.open('https://wa.me/?text='+encodeURIComponent(textoWa),'_blank'); }
+    <\/script></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return Swal.fire('Atenção', 'Permita pop-ups para abrir o comprovante', 'warning');
+    w.document.write(html); w.document.close();
+};
+
+window.visualizarNota = function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return Swal.fire('Atenção', 'Documento não encontrado', 'warning');
+    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
+    const logo = (empresa && empresa.logo) || '';
+    let linhas = '';
+    (d.itens || []).forEach(it => {
+        const ehServ = it.tipo === 'servico' || it.categoriaOS === 'servico' || String(it.nome || '').includes('[M.O.]');
+        const pago = ehServ ? '-' : fmt(it.totalPago || ((it.valorPago || it.custoOriginal || 0) * (it.qtd || 1)));
+        linhas += `<tr>
+            <td>${ehServ ? 'Serviço' : 'Peça'}</td>
+            <td>${it.nome}</td>
+            <td style="text-align:center">${it.qtd || it.qtdBaixa || 1}</td>
+            <td style="text-align:right">${pago}</td>
+            <td style="text-align:right">${fmt(it.total || it.valor || 0)}</td>
+        </tr>`;
+    });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${d.tipo} ${d.numeroFmt||d.numero}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#222;padding:24px;max-width:800px;margin:auto}
+      h1{margin:0;font-size:22px} .muted{color:#666;font-size:12px}
+      table{width:100%;border-collapse:collapse;margin-top:16px} th,td{border-bottom:1px solid #ddd;padding:8px;font-size:13px}
+      th{background:#0d3b66;color:#fff;text-align:left} .tot{font-size:20px;font-weight:bold;text-align:right;margin-top:12px}
+      .head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+      img{max-height:70px} .badge{display:inline-block;padding:4px 10px;border-radius:4px;font-weight:bold}
+      .pago{background:#d4edda;color:#155724} .pend{background:#fff3cd;color:#856404}
+      @media print{button{display:none}}
+    </style></head><body>
+    <div class="head"><div>${logo?`<img src="${logo}" alt="logo">`:''}<h1>${empNome}</h1>
+    <div class="muted">${d.tipo === 'VENDA' ? 'Venda concluída' : 'Orçamento'} — motor elétrico</div></div>
+    <div><strong>${d.tipo} n. ${d.numeroFmt || d.numero}</strong>
+    <span class="badge ${d.statusPagamento==='PAGO'?'pago':'pend'}">${d.statusPagamento||'-'}</span><br>
+    Data: ${d.dataConversao||d.data||'-'} ${d.formaPagamento?(' | Pagamento: '+d.formaPagamento):''}<br>
+    Cliente: <strong>${d.clienteNome||'-'}</strong><br>
+    Motor/Serviço: <strong>${descMotorDoc(d)}</strong>
+    </div>
+    <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Valor pago</th><th>Valor cobrado</th></tr></thead>
+    <tbody>${linhas}</tbody></table>
+    <div class="tot">TOTAL COBRADO: ${fmt(d.total)}</div>
+    ${d.observacao?('<p class="muted">Obs.: '+d.observacao+'</p>'):''}
+    <button onclick="window.print()" style="margin-top:16px;padding:10px 16px">🖨️ Imprimir</button>
+    <script>setTimeout(function(){},100)<\/script></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return Swal.fire('Atenção', 'Permita pop-ups para visualizar', 'warning');
+    w.document.write(html); w.document.close();
+};
 
 window.excluirDoc = async function(id) {
     if (!(await Swal.fire({ title:'Excluir documento?', icon:'warning', showCancelButton:true })).isConfirmed) return;
@@ -2199,6 +2592,64 @@ window.selecionarCaixa = function(conta, el) {
     document.querySelectorAll('.tab-caixa').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
     atualizarDashCaixa(); renderExtratoCaixa();
+};
+
+function ehLancamentoHoje(e) {
+    const ds = String(e.dataStr || '');
+    const hj = new Date();
+    const d1 = String(hj.getDate()).padStart(2,'0');
+    const m1 = String(hj.getMonth()+1).padStart(2,'0');
+    const y1 = String(hj.getFullYear());
+    // formatos: dd/mm/yyyy ... ou ISO date field
+    if (ds.includes('/')) {
+        const parts = ds.split(/[,\s]/)[0].split('/');
+        if (parts.length >= 3) return parts[0] === d1 && parts[1] === m1 && parts[2].slice(0,4) === y1;
+    }
+    if (e.data) return String(e.data) === hoje();
+    // fallback timestamp
+    if (e.timestamp) {
+        const d = new Date(e.timestamp);
+        return d.getDate() === hj.getDate() && d.getMonth() === hj.getMonth() && d.getFullYear() === hj.getFullYear();
+    }
+    return false;
+}
+
+window.fechamentoCaixaDia = function() {
+    const contas = [
+        { id: 'mercadopago', nome: 'Mercado Pago' },
+        { id: 'picpayempresas', nome: 'PicPay Empresas' },
+        { id: 'nubank', nome: 'Nubank (pessoal/M.O.)' }
+    ];
+    let html = `<p style="font-size:12px;color:var(--muted)">Movimentações de <strong>${hoje()}</strong> (loja / bancos).</p>`;
+    let entG = 0, saiG = 0;
+    contas.forEach(c => {
+        const lista = (extratos[c.id] || []).filter(ehLancamentoHoje);
+        let ent = 0, sai = 0;
+        lista.forEach(e => { if (e.tipo === 'ENTRADA') ent += parseFloat(e.valor)||0; else sai += parseFloat(e.valor)||0; });
+        entG += ent; saiG += sai;
+        html += `<div style="margin:10px 0;padding:10px;border:1px solid #7f8c8d;border-radius:8px">
+            <strong>${c.nome}</strong> — Entradas ${fmt(ent)} | Saídas ${fmt(sai)} | Líquido ${fmt(ent-sai)}
+            <div style="font-size:11px;margin-top:6px;color:var(--muted)">${lista.length ? lista.map(e => `${e.tipo}: ${e.descricao} (${fmt(e.valor)})`).join('<br>') : 'Sem lançamentos hoje.'}</div>
+        </div>`;
+    });
+    html += `<div style="font-weight:bold;margin-top:8px">TOTAL DO DIA — Entradas ${fmt(entG)} | Saídas ${fmt(saiG)} | Líquido ${fmt(entG-saiG)}</div>`;
+    const painel = document.getElementById('painelFechamentoDia');
+    const box = document.getElementById('conteudoFechamentoDia');
+    if (box) box.innerHTML = html;
+    if (painel) painel.style.display = 'block';
+    window._fechamentoHtml = html;
+};
+
+window.imprimirFechamentoDia = function() {
+    const body = window._fechamentoHtml || document.getElementById('conteudoFechamentoDia')?.innerHTML || '';
+    if (!body) return fechamentoCaixaDia();
+    const w = window.open('', '_blank');
+    if (!w) return Swal.fire('Atenção','Permita pop-ups','warning');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fechamento ${hoje()}</title>
+    <style>body{font-family:Arial;padding:20px;color:#222} h1{font-size:18px}</style></head><body>
+    <h1>FH MOTORES — Fechamento do Caixa ${hoje()}</h1>${body}
+    <script>window.print()<\/script></body></html>`);
+    w.document.close();
 };
 
 function calcSaldoConta(conta) {
@@ -2690,6 +3141,17 @@ document.getElementById('vendaData').value = hoje();
 gerarNumOrc().then(n => { document.getElementById('orcNumero').value = n; atualizarDescMotorOrc(); });
 gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; });
 refreshFromStore();
+// Seed tabela de rebobinamento se vazia (valores exemplo — edite depois)
+(async function seedServicosSeVazio() {
+    if (servicos.length) return;
+    const base = [
+        { nome:'Rebobinamento', potencia:'0,75', polos:'2', fase:'Monofásico', valor:410 },
+        { nome:'Rebobinamento', potencia:'1', polos:'2', fase:'Monofásico', valor:450 },
+        { nome:'Rebobinamento', potencia:'2', polos:'2', fase:'Monofásico', valor:520 },
+        { nome:'Rebobinamento', potencia:'3', polos:'2', fase:'Trifásico', valor:580 }
+    ];
+    for (const s of base) await dbPush('servicos', s);
+})();
 setInterval(monitorarVencimentosDocumentos, 60000);
 
 // Bipe: Enter no campo de venda adiciona peça automaticamente
