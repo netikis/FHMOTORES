@@ -413,21 +413,19 @@
                             <input id="orcCliente" list="dlClientes" placeholder="Ex: Joselton, Sérgio...">
                             <datalist id="dlClientes"></datalist>
                         </div>
-                        <div class="col"><label>Telefone</label><input id="orcTel" placeholder="WhatsApp"></div>
+                        <div class="col"><label>WhatsApp</label><input id="orcTel" placeholder="(00) 00000-0000"></div>
                     </div>
+                    <input type="hidden" id="orcMotor" value="">
+                    <input type="hidden" id="orcTipoServico" value="Rebobinamento">
+                    <input type="hidden" id="orcSerie" value="">
+                    <input type="hidden" id="orcRpm" value="">
+                </div>
+                <div class="bloco" style="border:1px solid rgba(241,196,15,.45)">
+                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">1. Rebobinamento / Mão de Obra</h3>
                     <div class="row">
-                        <div class="col"><label>Tipo de Serviço</label>
-                            <select id="orcTipoServico" onchange="atualizarDescMotorOrc()">
-                                <option value="Rebobinamento">Rebobinamento</option>
-                                <option value="Revisão">Revisão / Manutenção</option>
-                                <option value="Troca de rolamentos">Troca de rolamentos</option>
-                                <option value="Montagem">Montagem</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                        <div class="col"><label>Potência (CV)</label><input id="orcPotencia" placeholder="Ex: 0,75" oninput="atualizarDescMotorOrc()"></div>
+                        <div class="col"><label>Potência (CV)</label><input id="orcPotencia" placeholder="Ex: 0,75" oninput="syncDescServicoOrc()"></div>
                         <div class="col"><label>Polos</label>
-                            <select id="orcPolos" onchange="atualizarDescMotorOrc()">
+                            <select id="orcPolos" onchange="syncDescServicoOrc()">
                                 <option value="2">2 polos</option>
                                 <option value="4">4 polos</option>
                                 <option value="6">6 polos</option>
@@ -436,7 +434,7 @@
                             </select>
                         </div>
                         <div class="col"><label>Alimentação</label>
-                            <select id="orcFase" onchange="atualizarDescMotorOrc()">
+                            <select id="orcFase" onchange="syncDescServicoOrc()">
                                 <option value="Monofásico">Monofásico</option>
                                 <option value="Trifásico">Trifásico</option>
                                 <option value="">—</option>
@@ -444,28 +442,18 @@
                         </div>
                     </div>
                     <div class="row" style="margin-bottom:8px">
-                        <div class="col" style="flex:1">
-                            <label>Atalhos — motores mais comuns</label>
+                        <div class="col">
+                            <label>Atalhos CV</label>
                             <div style="display:flex;flex-wrap:wrap;gap:6px">
-                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('0,75','2')">0,75 CV 2p</button>
-                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('1','2')">1 CV 2p</button>
-                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('2','2')">2 CV 2p</button>
-                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('3','2')">3 CV 2p</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('0,75','2')">0,75 CV</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('1','2')">1 CV</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('2','2')">2 CV</button>
+                                <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('3','2')">3 CV</button>
                                 <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('2','4')">2 CV 4p</button>
                                 <button type="button" class="btn-sm btn-info" onclick="aplicarPresetMotor('3','4')">3 CV 4p</button>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label>
-                            <input id="orcMotor" placeholder="Ex: Rebob. motor 0,75 cv 2 polos">
-                        </div>
-                        <div class="col"><label>Nº Série / Identificação</label><input id="orcSerie" placeholder="Opcional"></div>
-                        <div class="col"><label>RPM (opc.)</label><input id="orcRpm" placeholder="Ex: 3500"></div>
-                    </div>
-                </div>
-                <div class="bloco" style="border:1px solid rgba(241,196,15,.45)">
-                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">1. Rebobinamento / Mão de Obra (em cima — valor do serviço)</h3>
                     <div class="row">
                         <div class="col" style="flex:2"><label>Escolher da tabela (preço automático)</label>
                             <select id="orcServCatalogo" onchange="aplicarServicoCatalogo()">
@@ -475,14 +463,14 @@
                     </div>
                     <div class="row" style="margin-top:8px">
                         <div class="col" style="flex:2"><label>Descrição do serviço</label>
-                            <input id="orcServDesc" placeholder="Rebob. motor 0,75 cv 2 polos">
+                            <input id="orcServDesc" placeholder="Rebob. motor 0,75 cv 2 polos" oninput="document.getElementById('orcMotor').value=this.value">
                         </div>
                         <div class="col"><label>Valor cobrado (R$)</label><input type="number" id="orcServValor" step="0.01" placeholder="410,00"></div>
                         <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-info" onclick="addItemOrc('servico')">+ Serviço</button></div>
                     </div>
                 </div>
                 <div class="bloco">
-                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">2. Peças / Rolamentos (embaixo — valor pago × valor cobrado)</h3>
+                    <h3 style="margin:0 0 10px;font-size:13px;color:var(--gold)">2. Peças / Rolamentos</h3>
                     <div class="row">
                         <div class="col" style="flex:2"><label>Peça do estoque (bipe)</label>
                             <input id="orcProdBusca" class="campo-bipe" list="dlProdutos" placeholder="Ex: rolamento 6202, rotor, selo, ventoinha..." autocomplete="off"
@@ -1488,14 +1476,37 @@ window.aplicarServicoCatalogo = function() {
     const id = document.getElementById('orcServCatalogo').value;
     const s = servicos.find(x => x.id === id);
     if (!s) return;
-    document.getElementById('orcServDesc').value = descServicoItem(s);
+    const desc = descServicoItem(s);
+    document.getElementById('orcServDesc').value = desc;
     document.getElementById('orcServValor').value = (parseFloat(s.valor) || 0).toFixed(2);
     if (s.potencia) document.getElementById('orcPotencia').value = s.potencia;
     if (s.polos) document.getElementById('orcPolos').value = s.polos;
     if (s.fase) document.getElementById('orcFase').value = s.fase;
-    document.getElementById('orcTipoServico').value = 'Rebobinamento';
+    const ts = document.getElementById('orcTipoServico'); if (ts) ts.value = 'Rebobinamento';
+    const motorEl = document.getElementById('orcMotor'); if (motorEl) motorEl.value = desc;
+};
+
+window.syncDescServicoOrc = function() {
+    const pot = (document.getElementById('orcPotencia').value || '').trim();
+    const polos = document.getElementById('orcPolos').value || '';
+    const fase = document.getElementById('orcFase').value || '';
+    const partes = ['Rebob. motor'];
+    if (pot) partes.push(pot.replace('.', ',') + ' cv');
+    if (polos) partes.push(polos + ' polos');
+    if (fase) partes.push(fase.toLowerCase());
+    const desc = partes.join(' ');
+    const servEl = document.getElementById('orcServDesc');
     const motorEl = document.getElementById('orcMotor');
-    if (motorEl) { motorEl.dataset.manual = '0'; atualizarDescMotorOrc(); motorEl.value = descServicoItem(s); motorEl.dataset.manual = '1'; }
+    if (servEl) servEl.value = desc;
+    if (motorEl) motorEl.value = desc;
+};
+window.atualizarDescMotorOrc = window.syncDescServicoOrc;
+
+window.aplicarPresetMotor = function(cv, polos) {
+    const ts = document.getElementById('orcTipoServico'); if (ts) ts.value = 'Rebobinamento';
+    document.getElementById('orcPotencia').value = cv;
+    document.getElementById('orcPolos').value = String(polos);
+    window.syncDescServicoOrc();
 };
 
 document.getElementById('formServico').addEventListener('submit', async e => {
@@ -1586,39 +1597,6 @@ window.preencherProdOrc = function() {
     atualizarResumoEstoqueOrc();
 };
 
-window.atualizarDescMotorOrc = function() {
-    const tipo = document.getElementById('orcTipoServico').value || '';
-    const pot = (document.getElementById('orcPotencia').value || '').trim();
-    const polos = document.getElementById('orcPolos').value || '';
-    const fase = document.getElementById('orcFase').value || '';
-    let abrev = tipo;
-    if (tipo === 'Rebobinamento') abrev = 'Rebob.';
-    let partes = [abrev, 'motor'];
-    if (pot) partes.push(pot.replace('.', ',') + ' cv');
-    if (polos) partes.push(polos + ' polos');
-    if (fase) partes.push(fase.toLowerCase());
-    const desc = partes.join(' ');
-    const motorEl = document.getElementById('orcMotor');
-    const servEl = document.getElementById('orcServDesc');
-    if (motorEl && (!motorEl.dataset.manual || motorEl.dataset.manual === '0')) motorEl.value = desc;
-    if (servEl && !servEl.value.trim()) servEl.value = desc;
-};
-
-window.aplicarPresetMotor = function(cv, polos) {
-    document.getElementById('orcTipoServico').value = 'Rebobinamento';
-    document.getElementById('orcPotencia').value = cv;
-    document.getElementById('orcPolos').value = String(polos);
-    const motorEl = document.getElementById('orcMotor');
-    if (motorEl) motorEl.dataset.manual = '0';
-    atualizarDescMotorOrc();
-    const serv = document.getElementById('orcServDesc');
-    if (serv) serv.value = document.getElementById('orcMotor').value;
-};
-document.addEventListener('DOMContentLoaded', function() {
-    const m = document.getElementById('orcMotor');
-    if (m) m.addEventListener('input', function() { this.dataset.manual = this.value.trim() ? '1' : '0'; });
-});
-
 window.atualizarResumoEstoqueOrc = function() {
     const box = document.getElementById('orcEstoqueResumo');
     if (!box) return;
@@ -1652,7 +1630,11 @@ function parseNumOrc(str) {
     return parseInt(s, 10) || 0;
 }
 function descMotorDoc(d) {
-    return d.motor || d.descricaoMotor || [d.veiculo, d.placa].filter(Boolean).join(' / ') || '-';
+    if (d.motor || d.descricaoMotor) return d.motor || d.descricaoMotor;
+    const itens = d.itens ? (Array.isArray(d.itens) ? d.itens : Object.values(d.itens)) : [];
+    const serv = itens.find(i => i.tipo === 'servico' || i.categoriaOS === 'servico' || String(i.nome||'').includes('[M.O.]'));
+    if (serv) return String(serv.nome || '').replace(/^\[M\.O\.\]\s*/, '');
+    return [d.veiculo, d.placa].filter(Boolean).join(' / ') || '-';
 }
 
 // ==================== LANÇAR VENDA (FH Control) ====================
@@ -2223,20 +2205,24 @@ window.salvarOrcamento = async function() {
     const numeroFmt = document.getElementById('orcNumero').value || await gerarNumOrc();
     const numero = parseNumOrc(numeroFmt);
     const anoOrc = parseInt(String(numeroFmt).split('-')[1], 10) || new Date().getFullYear();
+    const motorDesc = (document.getElementById('orcServDesc').value || document.getElementById('orcMotor').value || '').trim()
+        || (carrinhoOrc.find(i => i.tipo === 'servico') || {}).nome || '';
+    const motorLimpo = String(motorDesc).replace(/^\[M\.O\.\]\s*/, '');
+    document.getElementById('orcMotor').value = motorLimpo;
     const doc = {
         tipo: 'ORCAMENTO', numero, numeroFmt, anoOrc,
         data: document.getElementById('orcData').value || hoje(),
         validade: document.getElementById('orcValidade').value,
         clienteNome: cliente, clienteId: cli ? cli.id : 'avulso',
         telefone: document.getElementById('orcTel').value,
-        motor: document.getElementById('orcMotor').value,
+        motor: motorLimpo,
         potencia: document.getElementById('orcPotencia').value,
         polos: document.getElementById('orcPolos').value,
         fase: document.getElementById('orcFase').value,
-        tipoServico: document.getElementById('orcTipoServico').value,
-        serie: document.getElementById('orcSerie').value,
-        rpm: document.getElementById('orcRpm').value,
-        veiculo: '', placa: document.getElementById('orcSerie').value,
+        tipoServico: (document.getElementById('orcTipoServico') || {}).value || 'Rebobinamento',
+        serie: (document.getElementById('orcSerie') || {}).value || '',
+        rpm: (document.getElementById('orcRpm') || {}).value || '',
+        veiculo: '', placa: (document.getElementById('orcSerie') || {}).value || '',
         itens: [...carrinhoOrc], total, totalPago, lucro: total - totalPago,
         observacao: document.getElementById('orcObs').value, statusPagamento: 'PENDENTE',
         timestamp: Date.now(), dataStr: agora()
@@ -2248,9 +2234,8 @@ window.salvarOrcamento = async function() {
         ['orcCliente','orcTel','orcPotencia','orcSerie','orcRpm','orcObs','orcMotor','orcServDesc'].forEach(id => {
             const el = document.getElementById(id); if (el) el.value = '';
         });
-        const mot = document.getElementById('orcMotor'); if (mot) mot.dataset.manual = '0';
         document.getElementById('orcNumero').value = await gerarNumOrc();
-        atualizarDescMotorOrc();
+        const cat = document.getElementById('orcServCatalogo'); if (cat) cat.value = '';
         Swal.fire({ icon:'success', title:'Orçamento salvo!', text: 'Nº ' + numeroFmt, timer:1800, showConfirmButton:false });
         renderOrcamentos();
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
@@ -2270,13 +2255,13 @@ window.editarOrc = function(id) {
     document.getElementById('orcCliente').value = d.clienteNome||'';
     const tel = document.getElementById('orcTel'); if (tel) tel.value = d.telefone||'';
     document.getElementById('orcMotor').value = d.motor||'';
-    document.getElementById('orcMotor').dataset.manual = d.motor ? '1' : '0';
     const pot = document.getElementById('orcPotencia'); if (pot) pot.value = d.potencia||'';
     const pol = document.getElementById('orcPolos'); if (pol) pol.value = d.polos||'';
     const fase = document.getElementById('orcFase'); if (fase) fase.value = d.fase||'';
     const ts = document.getElementById('orcTipoServico'); if (ts && d.tipoServico) ts.value = d.tipoServico;
     const ser = document.getElementById('orcSerie'); if (ser) ser.value = d.serie || d.placa || '';
     const rpm = document.getElementById('orcRpm'); if (rpm) rpm.value = d.rpm||'';
+    const sd = document.getElementById('orcServDesc'); if (sd) sd.value = d.motor || '';
     document.getElementById('orcObs').value = d.observacao||'';
     carrinhoOrc = d.itens ? [...d.itens] : [];
     renderCarrinhoOrc();
@@ -2720,6 +2705,8 @@ window._montarHtmlNotaA4 = function(doc, modo) {
     const dataEmissao = doc.dataStr || doc.dataConversao || doc.data || '-';
     const dataCurta = String(dataEmissao).split(' ')[0];
     const motorTxt = (typeof descMotorDoc === 'function' ? descMotorDoc(doc) : '') || doc.motor || '';
+    const temSpecs = !!(doc.potencia || doc.polos || doc.fase);
+    const telCli = doc.telefone || '';
 
     let matHtml = '', servHtml = '', totalMat = 0, totalServ = 0;
     const itens = doc.itens ? (Array.isArray(doc.itens) ? doc.itens : Object.values(doc.itens)) : [];
@@ -2740,14 +2727,14 @@ window._montarHtmlNotaA4 = function(doc, modo) {
     const contatos = [];
     if (emp.cnpj) contatos.push('CNPJ: ' + emp.cnpj);
     if (emp.telefone) contatos.push('Contato: ' + emp.telefone);
-    const motorLinha = motorTxt
+    const motorLinha = (motorTxt && motorTxt !== '-')
         ? `<div class="info-card"><div class="card-title">Motor / Serviço</div>
             <div style="font-size:12px;font-weight:700;">${window._escHtmlNota(motorTxt)}</div>
-            <div class="grid-3" style="margin-top:8px;font-size:11px;">
+            ${temSpecs ? `<div class="grid-3" style="margin-top:8px;font-size:11px;">
               <div><strong>Potência:</strong><br>${window._escHtmlNota(doc.potencia || '-')} CV</div>
               <div><strong>Polos:</strong><br>${window._escHtmlNota(doc.polos || '-')}</div>
               <div><strong>Fase:</strong><br>${window._escHtmlNota(doc.fase || '-')}</div>
-            </div>
+            </div>` : ''}
             ${doc.serie ? `<div style="margin-top:6px;font-size:11px;"><strong>Nº série:</strong> ${window._escHtmlNota(doc.serie)}</div>` : ''}
           </div>` : '';
 
@@ -2757,7 +2744,9 @@ window._montarHtmlNotaA4 = function(doc, modo) {
 
     const validadeLinha = doc.validade
         ? `<div><strong>Validade:</strong><br>${window._escHtmlNota(doc.validade)}</div>`
-        : `<div><strong>Atendente:</strong><br>Sistema</div>`;
+        : (telCli ? `<div><strong>WhatsApp:</strong><br>${window._escHtmlNota(telCli)}</div>` : `<div><strong>Atendente:</strong><br>Sistema</div>`);
+
+    const blocoDadosExtra = '';
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Doc Nº ${window._escHtmlNota(num)}</title>
 <style>
@@ -2837,8 +2826,10 @@ ${paraCliente ? '<div class="pdf-marca-dagua">CÓPIA PARA CLIENTE — SOMENTE LE
       <div><strong>Data de Emissão:</strong><br>${window._escHtmlNota(dataEmissao)}</div>
       ${validadeLinha}
     </div>
+    ${telCli ? `<div style="margin-top:8px;font-size:11px;"><strong>WhatsApp:</strong> ${window._escHtmlNota(telCli)}</div>` : ''}
   </div>
 
+  ${blocoDadosExtra}
   ${motorLinha}
 
   <div class="tabela-box">
@@ -3451,7 +3442,7 @@ window.fecharTodosAlertasDocs = function() {
 // ==================== INIT ====================
 document.getElementById('orcData').value = hoje();
 document.getElementById('vendaData').value = hoje();
-gerarNumOrc().then(n => { document.getElementById('orcNumero').value = n; atualizarDescMotorOrc(); });
+gerarNumOrc().then(n => { document.getElementById('orcNumero').value = n; });
 gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; });
 refreshFromStore();
 // Seed tabela de rebobinamento se vazia (valores exemplo — edite depois)
