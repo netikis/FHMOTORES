@@ -86,14 +86,32 @@
             text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,.1); padding-bottom: 8px;
         }
         .bloco { background: var(--panel-dark); padding: 14px; border-radius: 8px; border: 1px solid #7f8c8d; margin-bottom: 10px; }
-        label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+        .bloco > h3 { margin: 0 0 10px; font-size: 13px; color: var(--gold); }
+        label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; line-height: 1.2; min-height: 1.2em; }
         input, select, textarea {
             width: 100%; padding: 9px 10px; border: 1px solid #7f8c8d; border-radius: 6px;
             background: #ecf0f1; color: #2c3e50; font-family: inherit; font-size: 13px; margin-bottom: 8px;
+            min-height: 40px; box-sizing: border-box;
         }
+        textarea { min-height: 64px; }
         input:focus, select:focus, textarea:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 6px rgba(212,160,23,.3); }
-        .row { display: flex; gap: 12px; flex-wrap: wrap; }
-        .col { flex: 1; min-width: 140px; }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .col { flex: 1; min-width: 140px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .col > label { margin-bottom: 4px; }
+        .col > input, .col > select, .col > textarea { margin-bottom: 0; width: 100%; }
+        .col > button { width: 100%; margin-bottom: 0; min-height: 40px; align-self: stretch; }
+        .col-btn { flex: 0 0 120px; min-width: 110px; max-width: 150px; }
+        .col-btn > label.lbl-spacer { visibility: hidden; pointer-events: none; }
+        .col-acao { flex: 0 0 auto; min-width: 110px; }
+        .layout-duplo {
+            display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start;
+        }
+        .layout-duplo > .card { margin-bottom: 0; }
+        .layout-duplo > .card:last-child { position: sticky; top: 8px; }
+        @media (max-width: 1100px) {
+            .layout-duplo { grid-template-columns: 1fr; }
+            .layout-duplo > .card:last-child { position: static; }
+        }
         button {
             padding: 9px 14px; border: none; border-radius: 6px; font-weight: 700;
             cursor: pointer; font-family: inherit; font-size: 12px; text-transform: uppercase; transition: .2s;
@@ -460,7 +478,7 @@
                             <input id="orcServDesc" placeholder="Rebob. motor 0,75 cv 2 polos">
                         </div>
                         <div class="col"><label>Valor cobrado (R$)</label><input type="number" id="orcServValor" step="0.01" placeholder="410,00"></div>
-                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addItemOrc('servico')">+ Serviço</button></div>
+                        <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-info" onclick="addItemOrc('servico')">+ Serviço</button></div>
                     </div>
                 </div>
                 <div class="bloco">
@@ -483,7 +501,7 @@
                         <div class="col"><label>Qtd.</label><input type="text" inputmode="decimal" id="orcProdQtd" value="1" oninput="atualizarResumoEstoqueOrc()"></div>
                         <div class="col"><label>Valor pago (custo)</label><input type="number" step="0.01" id="orcProdCusto" placeholder="98,08"></div>
                         <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="orcProdValor" placeholder="120,00"></div>
-                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-success" style="width:100%" onclick="addItemOrc('peca')">+ Peça</button></div>
+                        <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-success" onclick="addItemOrc('peca')">+ Peça</button></div>
                     </div>
                     <div id="orcEstoqueResumo" class="estoque-resumo"></div>
                 </div>
@@ -519,6 +537,7 @@
 
         <!-- LANÇAR VENDA (FH Control) -->
         <section id="secLancarVenda" class="section">
+            <div class="layout-duplo">
             <div class="card">
                 <h2>🛒 Lançar Venda — Balcão / Serviço Imediato</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">Atendimento rápido: cliente chega sem orçamento prévio. Selecione <strong>VENDA DIRETA</strong>, bipe as peças, adicione mão de obra e liquide o pagamento no mesmo fluxo (baixa estoque na hora).</p>
@@ -615,14 +634,14 @@
                     <div class="row" style="margin-top:8px">
                         <div class="col" style="flex:2"><label>Descrição</label><input id="vendaRebDesc" placeholder="Rebob. motor 0,75 cv 2 polos"></div>
                         <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaRebValor" placeholder="410,00"></div>
-                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addAoCarrinhoVenda_Rebob()">+ ADD Rebob.</button></div>
+                        <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-info" onclick="addAoCarrinhoVenda_Rebob()">+ ADD Rebob.</button></div>
                     </div>
                 </div>
 
                 <div class="bloco">
                     <h3 style="margin:0 0 8px;font-size:13px;color:var(--gold)">2. Peças / Rolamentos — Bipe ou busque</h3>
                     <div class="row">
-                        <div class="col" style="flex:2">
+                        <div class="col" style="flex:2"><label>Peça do estoque (bipe)</label>
                             <input id="vendaProdBusca" class="campo-bipe" list="dlProdutosVenda" placeholder="Bipe código ou nome..."
                                 oninput="atualizarResumoEstoqueVenda()" onchange="preencherCamposVendaEstoque()">
                             <datalist id="dlProdutosVenda"></datalist>
@@ -642,24 +661,27 @@
                         <div class="col"><label>Margem %</label><input type="number" step="0.1" id="vendaProdMargem" oninput="recalcularPrecoVenda()"></div>
                         <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="vendaProdPreco" oninput="recalcularMargemVenda()"></div>
                         <div class="col"><label>Total</label><input id="vendaProdTotalLinha" readonly style="color:#2ecc71;font-weight:bold"></div>
-                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-success" style="width:100%" onclick="addAoCarrinhoVenda_Estoque()">+ ADD</button></div>
+                        <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-success" onclick="addAoCarrinhoVenda_Estoque()">+ ADD</button></div>
                     </div>
                 </div>
 
                 <div class="bloco" style="border-color:rgba(231,76,60,.5)">
                     <h3 style="margin:0 0 8px;font-size:13px;color:#e74c3c">3. Item Avulso (sem estoque)</h3>
                     <div class="row">
-                        <div class="col" style="flex:2"><input id="vendaAvulsoNome" placeholder="Descrição avulsa..."></div>
+                        <div class="col" style="flex:2"><label>Descrição</label><input id="vendaAvulsoNome" placeholder="Descrição avulsa..."></div>
                         <div class="col"><label>Qtd</label><input id="vendaAvulsoQtd" value="1" inputmode="decimal"></div>
                         <div class="col"><label>Valor R$</label><input type="number" step="0.01" id="vendaAvulsoValor"></div>
-                        <div class="col" style="align-self:flex-end"><button type="button" class="btn-success" style="width:100%" onclick="addAoCarrinhoVenda_Avulso()">+ ADD</button></div>
+                        <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-success" onclick="addAoCarrinhoVenda_Avulso()">+ ADD</button></div>
                     </div>
                 </div>
 
-                <div class="row" style="align-items:flex-end">
-                    <div class="col" style="flex:2"><label>4. Mão de Obra extra (opcional)</label><input id="vendaMODesc" placeholder="Serviço extra no motor..."></div>
-                    <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaMOValor"></div>
-                    <div class="col" style="align-self:flex-end"><button type="button" class="btn-info" style="width:100%" onclick="addAoCarrinhoVenda_MO()">+ Serv</button></div>
+                <div class="bloco">
+                    <h3 style="margin:0 0 8px;font-size:13px;color:var(--gold)">4. Mão de Obra extra (opcional)</h3>
+                    <div class="row">
+                        <div class="col" style="flex:2"><label>Descrição do serviço</label><input id="vendaMODesc" placeholder="Serviço extra no motor..."></div>
+                        <div class="col"><label>Valor cobrado R$</label><input type="number" step="0.01" id="vendaMOValor"></div>
+                        <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-info" onclick="addAoCarrinhoVenda_MO()">+ Serv</button></div>
+                    </div>
                 </div>
             </div>
 
@@ -681,11 +703,14 @@
                         </div>
                     </div>
                 </div>
-                <div class="col" style="margin-top:10px"><label>Observações</label><textarea id="vendaObs" rows="2"></textarea></div>
+                <div class="row" style="margin-top:10px">
+                    <div class="col"><label>Observações</label><textarea id="vendaObs" rows="2"></textarea></div>
+                </div>
                 <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
                     <button type="button" class="btn-success" style="flex:1;padding:14px;font-size:15px" onclick="finalizarVenda()">✅ FINALIZAR E SALVAR</button>
                     <button type="button" class="btn-danger" id="btnCancelarEdicaoVenda" style="display:none;padding:14px" onclick="cancelarEdicaoVenda()">Cancelar Edição</button>
                 </div>
+            </div>
             </div>
         </section>
 
