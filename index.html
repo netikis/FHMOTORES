@@ -140,9 +140,21 @@
         .modal-box { background: var(--panel); border-radius: 12px; padding: 20px; max-width: 480px; width: 100%; border: 2px solid var(--gold); }
         .modal-box h3 { margin: 0 0 14px; color: var(--gold); }
         .close-modal { float: right; font-size: 22px; cursor: pointer; color: var(--muted); }
-        .acoes { display: flex; gap: 4px; flex-wrap: wrap; }
-        .btn-acao { background: #fff; color: #000; border: 1px solid #7f8c8d; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
-        .btn-acao:hover { background: var(--gold); }
+        .acoes { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+        .acoes-flex { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: 520px; }
+        td.celula-acoes { min-width: 460px; white-space: normal !important; vertical-align: middle; }
+        .btn-acao {
+            background-color: #ffffff; color: #000000; border: 1px solid #7f8c8d;
+            padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
+        }
+        .btn-acao:hover { background-color: #ecf0f1; border-color: #bdc3c7; color: #000; }
+        .btn-acao.nota:hover { background-color: #9b59b6; color: #fff; border-color: #9b59b6; }
+        .btn-acao.whats:hover { background-color: #2ecc71; color: #fff; border-color: #2ecc71; }
+        .btn-acao.pdf:hover { background-color: #3498db; color: #fff; border-color: #3498db; }
+        .btn-acao.del:hover { background-color: #e74c3c; color: #fff; border-color: #e74c3c; }
+        .btn-acao.edit:hover { background-color: #f1c40f; color: #000; border-color: #f1c40f; }
+        .btn-acao.receber:hover { background-color: #27ae60; color: #fff; border-color: #27ae60; }
         @keyframes piscarVermelho { 0%{background:rgba(231,76,60,.15)} 50%{background:rgba(231,76,60,.55)} 100%{background:rgba(231,76,60,.15)} }
         tr.linha-alerta { animation: piscarVermelho 1.5s infinite; }
         tr.linha-alerta td { color: #fff; font-weight: bold; }
@@ -2065,11 +2077,14 @@ window.finalizarVenda = async function() {
         const idSalvo = docId;
         await window.limparFormVenda();
         renderOrcamentos(); renderVendas();
+        if (tipoDoc === 'VENDA') {
+            abrirSecao('secVendas', document.querySelector('[data-sec=secVendas]'));
+        }
         if (foiPago) {
             const r = await Swal.fire({
                 icon: 'success', title: titulo,
-                text: 'Deseja abrir o comprovante pago para enviar no WhatsApp?',
-                showCancelButton: true, confirmButtonText: '📄 Comprovante', cancelButtonText: 'Fechar'
+                text: 'Venda em Vendas Concluídas. Abrir comprovante para WhatsApp?',
+                showCancelButton: true, confirmButtonText: '📄 Comprovante', cancelButtonText: 'Ver lista'
             });
             if (r.isConfirmed) window.comprovantePago(idSalvo);
         } else {
@@ -2243,7 +2258,9 @@ window.imprimirOrcamentoAtual = function(idDoc) {
     else if (editandoOrcId) d = documentos.find(x => x.id === editandoOrcId);
     else {
         d = {
+            tipo: 'ORCAMENTO',
             numeroFmt: document.getElementById('orcNumero').value,
+            numero: document.getElementById('orcNumero').value,
             data: document.getElementById('orcData').value || hoje(),
             validade: document.getElementById('orcValidade').value,
             clienteNome: document.getElementById('orcCliente').value,
@@ -2258,46 +2275,8 @@ window.imprimirOrcamentoAtual = function(idDoc) {
         };
     }
     if (!d || !(d.itens||[]).length) return Swal.fire('Atenção','Adicione itens ao orçamento antes de imprimir','warning');
-    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
-    const logo = (empresa && empresa.logo) || '';
-    let linhas = '';
-    (d.itens||[]).forEach(it => {
-        const ehServ = it.tipo === 'servico' || String(it.nome||'').includes('[M.O.]');
-        linhas += `<tr>
-            <td>${ehServ ? 'Serviço' : 'Peça'}</td>
-            <td>${it.nome}</td>
-            <td style="text-align:center">${it.qtd||1}</td>
-            <td style="text-align:right">${fmt(it.total)}</td>
-        </tr>`;
-    });
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Orçamento ${d.numeroFmt||d.numero}</title>
-    <style>
-      body{font-family:Arial,sans-serif;color:#222;padding:24px;max-width:800px;margin:auto}
-      h1{margin:0;font-size:22px} .muted{color:#666;font-size:12px}
-      table{width:100%;border-collapse:collapse;margin-top:16px} th,td{border-bottom:1px solid #ddd;padding:8px;font-size:13px}
-      th{background:#0d3b66;color:#fff;text-align:left} .tot{font-size:20px;font-weight:bold;text-align:right;margin-top:12px}
-      .head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
-      img{max-height:70px} @media print{button{display:none}}
-    </style></head><body>
-    <div class="head"><div>${logo?`<img src="${logo}" alt="logo">`:''}<h1>${empNome}</h1>
-    <div class="muted">Orçamento de motor elétrico</div></div>
-    <div><strong>Orçamento n. ${d.numeroFmt || d.numero}</strong><br>
-    Data: ${d.data||'-'} ${d.validade?(' | Validade: '+d.validade):''}<br>
-    Cliente: <strong>${d.clienteNome||'-'}</strong>${d.telefone?(' — '+d.telefone):''}<br>
-    Motor/Serviço: <strong>${d.motor||'-'}</strong><br>
-    ${d.potencia?('Potência: '+d.potencia+' CV '):''}${d.polos?('| Polos: '+d.polos+' '):''}${d.fase?('| '+d.fase):''}
-    ${d.serie?('<br>Nº série: '+d.serie):''}
-    </div>
-    <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Valor cobrado</th></tr></thead>
-    <tbody>${linhas}</tbody></table>
-    <div class="tot">TOTAL: ${fmt(d.total)}</div>
-    ${d.observacao?('<p class="muted">Obs.: '+d.observacao+'</p>'):''}
-    <p class="muted" style="margin-top:28px">Valores sujeitos a confirmação. Peças: valor cobrado ao cliente.</p>
-    <button onclick="window.print()">Imprimir</button>
-    <script>window.print()<\/script></body></html>`;
-    const w = window.open('', '_blank');
-    if (!w) return Swal.fire('Atenção','Permita pop-ups para imprimir','warning');
-    w.document.write(html); w.document.close();
+    if (!d.tipo) d.tipo = 'ORCAMENTO';
+    window.abrirPdfDocumento(d, 'loja');
 };
 
 window.abrirConverter = function(id) {
@@ -2446,7 +2425,7 @@ function renderVendas() {
     const elPend = document.getElementById('dashVendasPendentes'); if (elPend) elPend.textContent = fmt(pend);
     const elQtd = document.getElementById('dashVendasQtdPend'); if (elQtd) elQtd.textContent = String(qtdPend);
 
-    vendas.filter(d => !busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numero).includes(busca))
+    vendas.filter(d => !busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numeroFmt||d.numero).includes(busca) || (d.motor||'').toLowerCase().includes(busca))
     .forEach(d => {
         const st = d.statusPagamento === 'PAGO' ? '<span class="badge badge-pago">PAGO</span>' : '<span class="badge badge-pend">PENDENTE</span>';
         const cx = rotuloCaixaVenda(d.tipoVenda);
@@ -2454,121 +2433,417 @@ function renderVendas() {
         tb.innerHTML += `<tr${trClass}>
             <td>${d.numeroFmt||d.numero}</td><td>${d.dataConversao||d.data||'-'}</td><td>${d.clienteNome}</td>
             <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td><td>${st}</td><td>${cx}</td>
-            <td class="acoes">
-                <button class="btn-acao" onclick="visualizarNota('${d.id}')" title="Visualizar / Imprimir">👁️</button>
-                ${d.statusPagamento === 'PAGO' ? `<button class="btn-acao" style="background:#27ae60;color:#fff" onclick="comprovantePago('${d.id}')" title="Comprovante pago (WhatsApp)">📄</button>` : ''}
-                <button class="btn-acao" onclick="editarVenda('${d.id}')">✏️</button>
-                <button class="btn-acao" onclick="excluirDoc('${d.id}')">🗑️</button>
-            </td></tr>`;
+            <td class="celula-acoes"><div class="acoes-flex">${montarAcoesVendaHtml(d)}</div></td></tr>`;
     });
 }
 window.renderVendas = renderVendas;
+
+window._urlSebraeNfe = 'https://amei.sebrae.com.br/auth/realms/externo/protocol/openid-connect/auth?client_id=emissor-nfe-frontend&redirect_uri=https%3A%2F%2Femissornfe.sebrae.com.br%2F&state=8d2bc86c-0e59-4ece-85a1-37899762e0da&response_mode=fragment&response_type=code&scope=openid&nonce=42ceb5f7-4211-498c-9b29-53626699c44e';
+window._urlNfeGov = 'https://www.nfse.gov.br/EmissorNacional/Login?ReturnUrl=%2fEmissorNacional';
+
+function montarAcoesVendaHtml(d) {
+    const id = d.id;
+    const pago = (d.statusPagamento || '') === 'PAGO';
+    let h = '';
+    h += `<button type="button" class="btn-acao edit" onclick="editarVenda('${id}')" title="Editar">✏️ Ed</button>`;
+    h += `<button type="button" class="btn-acao whats" onclick="enviarWhatsVenda('${id}')" title="WhatsApp">📱 Whats</button>`;
+    h += `<button type="button" class="btn-acao" onclick="copiarLinkVenda('${id}')" title="Copiar link">🔗 Link</button>`;
+    h += `<a href="${window._urlSebraeNfe}" target="_blank" rel="noopener" class="btn-acao nota" title="Emissor NFe Sebrae">🏢 Sebrae</a>`;
+    h += `<a href="${window._urlNfeGov}" target="_blank" rel="noopener" class="btn-acao nota" title="NFSe Nacional">📄 NFE</a>`;
+    h += `<button type="button" class="btn-acao pdf" onclick="gerarPDFVenda('${id}')" title="PDF / imprimir loja">📄 PDF</button>`;
+    h += `<button type="button" class="btn-acao" onclick="gerarPDFCliente('${id}')" title="PDF para enviar ao cliente">📤 PDF Cliente</button>`;
+    h += `<button type="button" class="btn-acao" onclick="imprimirCupom('${id}')" title="Cupom 80mm">🧾 Cupom</button>`;
+    if (pago) {
+        h += `<button type="button" class="btn-acao" style="color:#e74c3c" onclick="estornarPagamento('${id}')" title="Desfazer pagamento">🔄 Estornar</button>`;
+    } else {
+        h += `<button type="button" class="btn-acao receber" style="border-color:#27ae60;color:#27ae60" onclick="marcarComoPago('${id}')" title="Registrar pagamento">💰 Receber</button>`;
+    }
+    h += `<button type="button" class="btn-acao del" onclick="excluirDoc('${id}')" title="Excluir">🗑️</button>`;
+    return h;
+}
+window.montarAcoesVendaHtml = montarAcoesVendaHtml;
+
+window.gerarPDFVenda = function(id) { window.abrirPdfDocumento(id, 'loja'); };
+window.gerarPDFCliente = function(id) { window.abrirPdfDocumento(id, 'cliente'); };
+
+window.copiarLinkVenda = function(id) {
+    const link = window.location.origin + window.location.pathname + '?venda=' + encodeURIComponent(id);
+    const ok = () => Swal.fire({ icon: 'success', title: 'Link copiado!', text: 'Cole no WhatsApp do cliente.', timer: 2000, showConfirmButton: false });
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(ok).catch(() => Swal.fire('Link', link, 'info'));
+    } else {
+        Swal.fire('Link', link, 'info');
+    }
+};
+
+window.enviarWhatsVenda = function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return Swal.fire('Atenção', 'Venda não encontrada', 'warning');
+    const cli = clientes.find(c => c.id === d.clienteId || (c.nome || '').toLowerCase() === (d.clienteNome || '').toLowerCase());
+    let tel = '';
+    if (cli && cli.telefone) {
+        tel = String(cli.telefone).replace(/\D/g, '');
+        if (tel.length === 10 || tel.length === 11) tel = '55' + tel;
+    }
+    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
+    const num = d.numeroFmt || d.numero;
+    let msg = `Olá *${d.clienteNome}*, tudo bem?\n\n`;
+    msg += `Segue sua venda *Nº ${num}* — ${empNome}.\n`;
+    if (descMotorDoc(d)) msg += `*Serviço:* ${descMotorDoc(d)}\n`;
+    msg += `\n*Itens:*\n`;
+    (d.itens || []).forEach(i => {
+        const nome = String(i.nome || '').replace(/^\[M\.O\.\]\s*/, '');
+        const val = i.total != null ? i.total : i.valor;
+        msg += `- ${nome}: ${fmt(val)}\n`;
+    });
+    msg += `\n*TOTAL: ${fmt(d.total)}*\n`;
+    msg += `*Status:* ${d.statusPagamento || '-'}${d.formaPagamento ? ' · ' + d.formaPagamento : ''}\n\n`;
+    msg += `Agradecemos a preferência! *${empNome}*`;
+    window.open(`https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+window.imprimirCupom = function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return Swal.fire('Atenção', 'Venda não encontrada', 'warning');
+    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
+    const logo = (empresa && empresa.logo) || '';
+    let contato = [];
+    if (empresa && empresa.cnpj) contato.push('CNPJ: ' + empresa.cnpj);
+    if (empresa && empresa.telefone) contato.push('Tel: ' + empresa.telefone);
+    let itensHtml = '';
+    const itens = d.itens || [];
+    const servs = itens.filter(i => i.tipo === 'servico' || i.categoriaOS === 'servico' || String(i.nome || '').includes('[M.O.]'));
+    const mats = itens.filter(i => !servs.includes(i));
+    if (servs.length) {
+        itensHtml += `<tr><td colspan="2" class="bold" style="padding-top:8px">-- REBOBINAMENTO / M.O. --</td></tr>`;
+        servs.forEach(i => {
+            const nome = String(i.nome || '').replace(/^\[M\.O\.\]\s*/, '');
+            itensHtml += `<tr><td>${nome}</td><td style="text-align:right">${fmt(i.total || i.valor || 0)}</td></tr>`;
+        });
+    }
+    if (mats.length) {
+        itensHtml += `<tr><td colspan="2" class="bold" style="padding-top:8px">-- PEÇAS --</td></tr>`;
+        mats.forEach(i => {
+            itensHtml += `<tr><td>${i.nome}</td><td style="text-align:right">${fmt(i.total || i.valor || 0)}</td></tr>`;
+        });
+    }
+    if (d.observacao) itensHtml += `<tr><td colspan="2" style="padding-top:8px;font-size:11px;border-top:1px dashed #000"><b>OBS:</b> ${d.observacao}</td></tr>`;
+    let htmlTroco = '';
+    if (d.valorRecebido && d.troco > 0) {
+        htmlTroco = `<div style="text-align:right;font-size:12px;margin-top:5px">Recebido: ${fmt(d.valorRecebido)}</div>
+            <div style="text-align:right;font-size:12px;font-weight:bold">Troco: ${fmt(d.troco)}</div>`;
+    }
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cupom</title>
+    <style>
+      @page{margin:0} body{font-family:'Courier New',monospace;width:300px;margin:0 auto;padding:15px;color:#000;font-size:12px}
+      .center{text-align:center}.bold{font-weight:bold}.line{border-bottom:1px dashed #000;margin:10px 0}
+      table{width:100%;border-collapse:collapse;font-size:12px} td{vertical-align:top;padding:2px 0}
+      @media print{.btn-imp{display:none!important}}
+      .btn-imp{position:fixed;bottom:20px;right:20px;background:#27ae60;color:#fff;border:0;padding:10px 15px;font-weight:bold;border-radius:6px;cursor:pointer}
+    </style></head><body>
+    ${logo ? `<div class="center"><img src="${logo}" style="max-height:60px;margin-bottom:5px"></div>` : ''}
+    <div class="center bold" style="font-size:14px;text-transform:uppercase">${empNome}</div>
+    ${contato.length ? `<div class="center" style="font-size:10px">${contato.join(' | ')}</div>` : ''}
+    ${empresa && empresa.endereco ? `<div class="center" style="font-size:10px">${empresa.endereco}</div>` : ''}
+    <div class="line"></div>
+    <div class="center">RECIBO / CUPOM NÃO FISCAL</div>
+    <div class="line"></div>
+    <div>Doc Nº: <span class="bold">${d.numeroFmt || d.numero}</span> (VENDA)</div>
+    <div>Data: ${d.dataConversao || d.data || d.dataStr || '-'}</div>
+    <div>Cliente: ${d.clienteNome || '-'}</div>
+    ${descMotorDoc(d) ? `<div>Motor: ${descMotorDoc(d)}</div>` : ''}
+    <div class="line"></div>
+    <table>${itensHtml}</table>
+    <div class="line"></div>
+    <div style="text-align:right;font-size:14px" class="bold">TOTAL: ${fmt(d.total)}</div>
+    <div style="text-align:right;font-size:12px">${d.formaPagamento || ''}</div>
+    ${htmlTroco}
+    <div class="line"></div>
+    <div class="center" style="font-size:11px">PAGAMENTO: ${d.statusPagamento === 'PAGO' ? 'RECEBIDO' : 'PENDENTE'}</div>
+    <div class="center" style="font-size:10px;margin-top:15px;margin-bottom:50px">Obrigado pela preferência!</div>
+    <button class="btn-imp" onclick="window.print()">🖨️ Imprimir Cupom</button>
+    </body></html>`;
+    const w = window.open('', '_blank', 'width=400,height=600');
+    if (!w) return Swal.fire('Atenção', 'Permita pop-ups', 'warning');
+    w.document.write(html); w.document.close();
+};
+
+window.marcarComoPago = async function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return;
+    if (d.statusPagamento === 'PAGO') return Swal.fire('Info', 'Esta venda já está paga.', 'info');
+    const r = await Swal.fire({
+        title: 'Receber pagamento?',
+        text: `Cliente: ${d.clienteNome} — Total: ${fmt(d.total)}`,
+        icon: 'question', showCancelButton: true, confirmButtonText: '💰 Confirmar PAGO', cancelButtonText: 'Cancelar'
+    });
+    if (!r.isConfirmed) return;
+    try {
+        await dbUpdate('documentos/' + id, { statusPagamento: 'PAGO', dataRecebimento: hoje(), dataStr: agora() });
+        await lancarVendaNasCaixas({ ...d, id, statusPagamento: 'PAGO' }, d.tipoVenda || 'COMPLETA');
+        renderVendas();
+        Swal.fire({ icon: 'success', title: 'Recebido!', text: 'Lançado nas caixas conforme a regra.', timer: 2200, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
+    }
+};
+
+window.estornarPagamento = async function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return;
+    if (d.statusPagamento !== 'PAGO') return Swal.fire('Info', 'Esta venda já está pendente.', 'info');
+    const r = await Swal.fire({
+        title: 'Estornar pagamento?',
+        html: `Nota Nº <b>${d.numeroFmt || d.numero}</b><br>Cliente: ${d.clienteNome}<br><br>Remove os lançamentos das caixas e volta para <b>Contas a Receber</b>.`,
+        icon: 'warning', showCancelButton: true, confirmButtonText: '🔄 Estornar', cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    });
+    if (!r.isConfirmed) return;
+    try {
+        for (const conta of ['mercadopago', 'picpayempresas', 'nubank']) {
+            const idsRemover = (extratos[conta] || [])
+                .filter(e => e.docId === id || (e.origem === 'venda' && String(e.descricao || '').includes(`#${d.numeroFmt || d.numero}`)))
+                .map(e => e.id);
+            for (const eid of idsRemover) {
+                await dbRemove(`contas/${conta}/extrato/${eid}`);
+            }
+        }
+        await dbUpdate('documentos/' + id, {
+            statusPagamento: 'PENDENTE',
+            dataRecebimento: null
+        });
+        renderVendas();
+        if (typeof renderExtratoCaixa === 'function') renderExtratoCaixa();
+        if (typeof renderPessoal === 'function') renderPessoal();
+        Swal.fire({ icon: 'success', title: 'Estornado!', text: 'Venda voltou para Contas a Receber.', timer: 2200, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
+    }
+};
 
 window.comprovantePago = function(id) {
     const d = documentos.find(x => x.id === id);
     if (!d) return Swal.fire('Atenção', 'Documento não encontrado', 'warning');
     if (d.statusPagamento !== 'PAGO') return Swal.fire('Atenção', 'Só há comprovante para vendas pagas.', 'info');
-    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
-    const empTel = (empresa && (empresa.telefone || empresa.whatsapp)) || '';
-    const logo = (empresa && empresa.logo) || '';
-    let linhas = '';
-    (d.itens || []).forEach(it => {
-        const ehServ = it.tipo === 'servico' || it.categoriaOS === 'servico' || String(it.nome || '').includes('[M.O.]');
-        linhas += `<tr>
-            <td>${ehServ ? 'Serviço' : 'Peça'}</td>
-            <td>${String(it.nome || '').replace(/^\[M\.O\.\]\s*/, '')}</td>
-            <td style="text-align:center">${it.qtd || it.qtdBaixa || 1}</td>
-            <td style="text-align:right">${fmt(it.total || it.valor || 0)}</td>
-        </tr>`;
-    });
-    const motorTxt = descMotorDoc(d) || '';
-    const textoWa = `*${empNome}* — COMPROVANTE PAGO\nVenda n. ${d.numeroFmt||d.numero}\nCliente: ${d.clienteNome||'-'}\nData: ${d.dataConversao||d.data||'-'} · ${d.formaPagamento||'-'}\n${motorTxt ? 'Serviço: '+motorTxt+'\n' : ''}*TOTAL: ${fmt(d.total)}*\nStatus: PAGO ✓`;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Comprovante PAGO ${d.numeroFmt||d.numero}</title>
-    <style>
-      body{font-family:Arial,sans-serif;color:#111;padding:20px;max-width:420px;margin:auto;background:#f7f7f7}
-      .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
-      h1{margin:0;font-size:18px} .ok{display:inline-block;margin:10px 0;padding:8px 14px;background:#27ae60;color:#fff;border-radius:8px;font-weight:bold;font-size:16px;letter-spacing:.5px}
-      .muted{color:#666;font-size:12px;line-height:1.4} table{width:100%;border-collapse:collapse;margin-top:12px}
-      th,td{padding:8px 4px;border-bottom:1px solid #eee;font-size:13px;text-align:left} th{color:#555;font-size:11px;text-transform:uppercase}
-      .tot{font-size:22px;font-weight:bold;text-align:right;margin-top:14px;color:#155724}
-      img{max-height:56px} .acoes{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-      .acoes button{flex:1;min-width:120px;padding:12px;border:0;border-radius:8px;font-weight:bold;cursor:pointer}
-      .print{background:#0d3b66;color:#fff} .wa{background:#25D366;color:#fff}
-      @media print{body{background:#fff;padding:0}.acoes{display:none}.card{box-shadow:none}}
-    </style></head><body><div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-      <div>${logo?`<img src="${logo}" alt="logo"><br>`:''}<h1>${empNome}</h1>
-      <div class="muted">${empTel}</div></div>
-    <div class="ok">✓ PAGO</div>
-    <div class="muted">Comprovante de pagamento<br>
-    Venda n. <strong>${d.numeroFmt||d.numero}</strong><br>
-    Data: ${d.dataConversao||d.data||'-'} · ${d.formaPagamento||'-'}<br>
-    Cliente: <strong>${d.clienteNome||'-'}</strong><br>
-    ${motorTxt ? ('Serviço: <strong>'+motorTxt+'</strong>') : ''}
-    </div>
-    <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Valor</th></tr></thead>
-    <tbody>${linhas}</tbody></table>
-    <div class="tot">TOTAL: ${fmt(d.total)}</div>
-    <p class="muted" style="margin-top:16px;text-align:center">Obrigado pela preferência!</p>
-    <div class="acoes">
-      <button class="print" onclick="window.print()">🖨️ Imprimir / PDF</button>
-      <button class="wa" onclick="compartilhar()">📲 WhatsApp</button>
-    </div></div>
-    <script>
-    var textoWa = ${JSON.stringify(textoWa)};
-    function compartilhar(){ window.open('https://wa.me/?text='+encodeURIComponent(textoWa),'_blank'); }
-    <\/script></body></html>`;
-    const w = window.open('', '_blank');
-    if (!w) return Swal.fire('Atenção', 'Permita pop-ups para abrir o comprovante', 'warning');
-    w.document.write(html); w.document.close();
+    window.abrirPdfDocumento(id, 'cliente');
 };
 
 window.visualizarNota = function(id) {
-    const d = documentos.find(x => x.id === id);
-    if (!d) return Swal.fire('Atenção', 'Documento não encontrado', 'warning');
-    const empNome = (empresa && empresa.nome) || 'FH MOTORES';
-    const logo = (empresa && empresa.logo) || '';
-    let linhas = '';
-    (d.itens || []).forEach(it => {
-        const ehServ = it.tipo === 'servico' || it.categoriaOS === 'servico' || String(it.nome || '').includes('[M.O.]');
-        const pago = ehServ ? '-' : fmt(it.totalPago || ((it.valorPago || it.custoOriginal || 0) * (it.qtd || 1)));
-        linhas += `<tr>
-            <td>${ehServ ? 'Serviço' : 'Peça'}</td>
-            <td>${it.nome}</td>
-            <td style="text-align:center">${it.qtd || it.qtdBaixa || 1}</td>
-            <td style="text-align:right">${pago}</td>
-            <td style="text-align:right">${fmt(it.total || it.valor || 0)}</td>
-        </tr>`;
+    window.abrirPdfDocumento(id, 'loja');
+};
+
+window._escHtmlNota = function(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+};
+
+window._fmtMoedaNota = function(v) {
+    const n = Number(v) || 0;
+    return 'R$ ' + n.toFixed(2).replace('.', ',');
+};
+
+window._htmlPagamentoNotaDoc = function(doc) {
+    const total = parseFloat(doc.total) || 0;
+    let html = '<div style="margin-top:12px;padding:10px;border:1px solid #dee2e6;border-radius:6px;background:#f8f9fa;">';
+    html += '<div style="font-weight:800;margin-bottom:6px;text-transform:uppercase;font-size:10px;color:#34495e;">Situação do pagamento</div>';
+    html += `<div style="margin-bottom:4px;">Valor total da nota: <strong>${window._fmtMoedaNota(total)}</strong></div>`;
+    if (doc.tipo === 'ORCAMENTO') {
+        html += '<div style="margin-top:6px;color:#3498db;font-weight:bold;">Documento: orçamento (valores sujeitos a confirmação)</div>';
+    } else if ((doc.statusPagamento || '') === 'PAGO') {
+        html += '<div style="margin-top:6px;color:#27ae60;font-weight:bold;">Pagamento: recebido integralmente' +
+            (doc.formaPagamento ? ` (${window._escHtmlNota(doc.formaPagamento)})` : '') + '</div>';
+    } else {
+        html += '<div style="margin-top:6px;color:#f39c12;font-weight:bold;">Pagamento: pendente</div>';
+    }
+    html += '</div>';
+    return html;
+};
+
+window._rodapeBotoesPdf = function(modo) {
+    if (modo === 'cliente') {
+        return `<div class="pdf-toolbar pdf-toolbar-cliente no-export-pdf">
+            <span class="pdf-toolbar-msg">Envio ao cliente: imprima ou salve como PDF (Ctrl+P → Destino: Salvar como PDF).</span>
+            <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        </div>`;
+    }
+    return `<div class="pdf-toolbar pdf-toolbar-loja no-export-pdf">
+        <span class="pdf-toolbar-msg">Uso na loja: imprima o papel A4 para entregar ao cliente.</span>
+        <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+    </div>`;
+};
+
+window._montarHtmlNotaA4 = function(doc, modo) {
+    modo = modo || 'loja';
+    const paraCliente = modo === 'cliente';
+    const emp = empresa || {};
+    const empNome = emp.nome || 'FH MOTORES';
+    const logo = emp.logo || 'https://www.image2url.com/r2/default/files/1777991879754-324ae06d-dd51-42bd-9f5b-f242d4babc74.jpeg';
+    const num = doc.numeroFmt || doc.numero || 'S/N';
+    const tipoLabel = doc.tipo === 'ORCAMENTO' ? 'ORÇAMENTO' : (doc.tipo || 'VENDA');
+    const dataEmissao = doc.dataStr || doc.dataConversao || doc.data || '-';
+    const dataCurta = String(dataEmissao).split(' ')[0];
+    const motorTxt = (typeof descMotorDoc === 'function' ? descMotorDoc(doc) : '') || doc.motor || '';
+
+    let matHtml = '', servHtml = '', totalMat = 0, totalServ = 0;
+    const itens = doc.itens ? (Array.isArray(doc.itens) ? doc.itens : Object.values(doc.itens)) : [];
+    itens.forEach(i => {
+        const isServ = i.tipo === 'servico' || i.categoriaOS === 'servico' ||
+            String(i.nome || '').includes('[M.O.]') || String(i.nome || '').toLowerCase().includes('mão de obra');
+        const nome = window._escHtmlNota(String(i.nome || '').replace(/^\[M\.O\.\]\s*/, ''));
+        const qtd = i.qtd || i.qtdBaixa || 1;
+        const val = Number(i.total != null ? i.total : i.valor) || 0;
+        const desc = qtd != 1 ? `${nome} <span style="color:#7f8c8d">(${qtd})</span>` : nome;
+        const td = `<tr><td style="font-size:9px;padding:4px 6px;">${desc}</td><td class="text-right" style="font-size:10px;padding:4px 6px;width:110px;">${window._fmtMoedaNota(val)}</td></tr>`;
+        if (isServ) { servHtml += td; totalServ += val; }
+        else { matHtml += td; totalMat += val; }
     });
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${d.tipo} ${d.numeroFmt||d.numero}</title>
-    <style>
-      body{font-family:Arial,sans-serif;color:#222;padding:24px;max-width:800px;margin:auto}
-      h1{margin:0;font-size:22px} .muted{color:#666;font-size:12px}
-      table{width:100%;border-collapse:collapse;margin-top:16px} th,td{border-bottom:1px solid #ddd;padding:8px;font-size:13px}
-      th{background:#0d3b66;color:#fff;text-align:left} .tot{font-size:20px;font-weight:bold;text-align:right;margin-top:12px}
-      .head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
-      img{max-height:70px} .badge{display:inline-block;padding:4px 10px;border-radius:4px;font-weight:bold}
-      .pago{background:#d4edda;color:#155724} .pend{background:#fff3cd;color:#856404}
-      @media print{button{display:none}}
-    </style></head><body>
-    <div class="head"><div>${logo?`<img src="${logo}" alt="logo">`:''}<h1>${empNome}</h1>
-    <div class="muted">${d.tipo === 'VENDA' ? 'Venda concluída' : 'Orçamento'} — motor elétrico</div></div>
-    <div><strong>${d.tipo} n. ${d.numeroFmt || d.numero}</strong>
-    <span class="badge ${d.statusPagamento==='PAGO'?'pago':'pend'}">${d.statusPagamento||'-'}</span><br>
-    Data: ${d.dataConversao||d.data||'-'} ${d.formaPagamento?(' | Pagamento: '+d.formaPagamento):''}<br>
-    Cliente: <strong>${d.clienteNome||'-'}</strong><br>
-    Motor/Serviço: <strong>${descMotorDoc(d)}</strong>
+    if (!matHtml) matHtml = `<tr><td colspan="2" class="text-center text-muted">Nenhum produto/material lançado.</td></tr>`;
+    if (!servHtml) servHtml = `<tr><td colspan="2" class="text-center text-muted">Nenhuma mão de obra/serviço lançado.</td></tr>`;
+
+    const contatos = [];
+    if (emp.cnpj) contatos.push('CNPJ: ' + emp.cnpj);
+    if (emp.telefone) contatos.push('Contato: ' + emp.telefone);
+    const motorLinha = motorTxt
+        ? `<div class="info-card"><div class="card-title">Motor / Serviço</div>
+            <div style="font-size:12px;font-weight:700;">${window._escHtmlNota(motorTxt)}</div>
+            <div class="grid-3" style="margin-top:8px;font-size:11px;">
+              <div><strong>Potência:</strong><br>${window._escHtmlNota(doc.potencia || '-')} CV</div>
+              <div><strong>Polos:</strong><br>${window._escHtmlNota(doc.polos || '-')}</div>
+              <div><strong>Fase:</strong><br>${window._escHtmlNota(doc.fase || '-')}</div>
+            </div>
+            ${doc.serie ? `<div style="margin-top:6px;font-size:11px;"><strong>Nº série:</strong> ${window._escHtmlNota(doc.serie)}</div>` : ''}
+          </div>` : '';
+
+    const obsHTML = doc.observacao
+        ? `<div class="info-card" style="margin-top:10px;"><div class="card-title">Observações</div><div style="font-size:10px;white-space:pre-wrap;">${window._escHtmlNota(doc.observacao)}</div></div>`
+        : '';
+
+    const validadeLinha = doc.validade
+        ? `<div><strong>Validade:</strong><br>${window._escHtmlNota(doc.validade)}</div>`
+        : `<div><strong>Atendente:</strong><br>Sistema</div>`;
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Doc Nº ${window._escHtmlNota(num)}</title>
+<style>
+@page { size: A4; margin: 10mm; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif; color: #333; font-size: 11px; margin: 0; padding: 0;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #eceff1;
+}
+#pdf-export-root {
+  box-sizing: border-box; width: 190mm; max-width: 190mm; margin: 10mm auto; padding: 0; background: #fff;
+}
+.header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; margin-bottom: 15px; }
+.logo-container { width: 25%; text-align: left; }
+.logo-img { max-height: 65px; max-width: 100%; object-fit: contain; }
+.empresa-info { width: 45%; text-align: center; }
+.empresa-nome { font-size: 15px; font-weight: bold; color: #2c3e50; text-transform: uppercase; margin-bottom: 3px; }
+.empresa-detalhes { font-size: 10px; color: #555; }
+.doc-info { width: 30%; text-align: right; }
+.doc-tipo { font-size: 12px; font-weight: bold; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+.doc-numero { font-size: 20px; font-weight: 900; color: #e74c3c; margin: 4px 0; }
+.info-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+.card-title { font-size: 10px; font-weight: 800; color: #34495e; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid #dee2e6; padding-bottom: 4px; letter-spacing: .5px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.tabela-box { margin-top: 15px; }
+.tabela-bonita { width: 100%; border-collapse: collapse; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px #dee2e6; }
+.tabela-bonita th { background: #2c3e50; color: #fff; padding: 4px 6px; font-size: 10px; text-transform: uppercase; text-align: left; }
+.tabela-bonita td { border-bottom: 1px solid #e9ecef; }
+.tabela-bonita tbody tr:nth-child(even) { background: #f8f9fa; }
+.tabela-bonita tfoot th { background: #e9ecef; color: #2c3e50; font-size: 11px; border-top: 2px solid #ced4da; padding: 6px; }
+.text-right { text-align: right; } .text-center { text-align: center; }
+.text-muted { color: #6c757d; font-style: italic; }
+.total-destaque { background: #2c3e50; color: #fff; font-size: 16px; font-weight: 900; text-align: right; padding: 10px 15px; margin-top: 15px; border-radius: 6px; }
+.area-assinaturas { display: flex; justify-content: space-around; margin-top: 25px; align-items: flex-end; }
+.ass-box { text-align: center; width: 40%; }
+.ass-linha { border-top: 1px solid #34495e; padding-top: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+.rodape { text-align: center; margin-top: 20px; font-size: 9px; color: #adb5bd; border-top: 1px dashed #dee2e6; padding-top: 8px; }
+.pdf-marca-dagua {
+  position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg);
+  font-size: 42px; color: rgba(44,62,80,.07); font-weight: 900; pointer-events: none; z-index: 0; white-space: nowrap;
+}
+.pdf-toolbar {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px;
+  z-index: 1000; background: rgba(44,62,80,.96); padding: 12px 18px; border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 92%;
+}
+.pdf-toolbar-msg { color: #ecf0f1; font-size: 11px; max-width: 320px; line-height: 1.35; }
+.btn-pdf-imprimir { background: #2980b9; color: #fff; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+.btn-pdf-imprimir:hover { background: #3498db; }
+@media print {
+  body { background: #fff !important; }
+  #pdf-export-root { width: auto; max-width: none; margin: 0; }
+  .pdf-toolbar, .no-export-pdf { display: none !important; }
+}
+</style></head>
+<body style="padding-bottom:90px;"${paraCliente ? ' oncontextmenu="return false;"' : ''}>
+${paraCliente ? '<div class="pdf-marca-dagua">CÓPIA PARA CLIENTE — SOMENTE LEITURA</div>' : ''}
+<div id="pdf-export-root" style="position:relative;z-index:1;">
+  <div class="header">
+    <div class="logo-container"><img src="${logo}" class="logo-img" alt="logo" onerror="this.style.display='none'"></div>
+    <div class="empresa-info">
+      <div class="empresa-nome">${window._escHtmlNota(empNome)}</div>
+      <div class="empresa-detalhes">${window._escHtmlNota(emp.endereco || '')}</div>
+      <div class="empresa-detalhes">${window._escHtmlNota(contatos.join(' | '))}</div>
     </div>
-    <table><thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Valor pago</th><th>Valor cobrado</th></tr></thead>
-    <tbody>${linhas}</tbody></table>
-    <div class="tot">TOTAL COBRADO: ${fmt(d.total)}</div>
-    ${d.observacao?('<p class="muted">Obs.: '+d.observacao+'</p>'):''}
-    <button onclick="window.print()" style="margin-top:16px;padding:10px 16px">🖨️ Imprimir</button>
-    <script>setTimeout(function(){},100)<\/script></body></html>`;
-    const w = window.open('', '_blank');
-    if (!w) return Swal.fire('Atenção', 'Permita pop-ups para visualizar', 'warning');
-    w.document.write(html); w.document.close();
+    <div class="doc-info">
+      <div class="doc-tipo">${window._escHtmlNota(tipoLabel)}</div>
+      <div class="doc-numero">Nº ${window._escHtmlNota(num)}</div>
+      <div style="font-size:10px;color:#7f8c8d;">Emitido em: ${window._escHtmlNota(dataCurta)}</div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="card-title">Dados do Documento</div>
+    <div class="grid-3">
+      <div><strong>Cliente:</strong><br>${window._escHtmlNota(doc.clienteNome || '-')}</div>
+      <div><strong>Data de Emissão:</strong><br>${window._escHtmlNota(dataEmissao)}</div>
+      ${validadeLinha}
+    </div>
+  </div>
+
+  ${motorLinha}
+
+  <div class="tabela-box">
+    <div class="card-title">Produtos / Materiais</div>
+    <table class="tabela-bonita">
+      <thead><tr><th>Descrição</th><th class="text-right">Valor</th></tr></thead>
+      <tbody>${matHtml}</tbody>
+      <tfoot><tr><th class="text-right">Subtotal:</th><th class="text-right">${window._fmtMoedaNota(totalMat)}</th></tr></tfoot>
+    </table>
+  </div>
+  <div class="tabela-box">
+    <div class="card-title">Mão de Obra / Serviços (Rebobinamento)</div>
+    <table class="tabela-bonita">
+      <thead><tr><th>Descrição</th><th class="text-right">Valor</th></tr></thead>
+      <tbody>${servHtml}</tbody>
+      <tfoot><tr><th class="text-right">Subtotal:</th><th class="text-right">${window._fmtMoedaNota(totalServ)}</th></tr></tfoot>
+    </table>
+  </div>
+
+  ${obsHTML}
+  <div class="total-destaque">TOTAL GERAL: ${window._fmtMoedaNota(doc.total)}</div>
+  ${window._htmlPagamentoNotaDoc(doc)}
+
+  <div class="area-assinaturas">
+    <div class="ass-box" style="margin-top:40px;"><div class="ass-linha">Assinatura da Empresa / Técnico</div></div>
+    <div class="ass-box" style="margin-top:40px;"><div class="ass-linha">Assinatura do Cliente</div></div>
+  </div>
+  <div class="rodape">Documento gerado eletronicamente pelo sistema ${window._escHtmlNota(empNome)}.${paraCliente ? ' — Versão para envio ao cliente.' : ''} Impressão A4.</div>
+</div>
+${window._rodapeBotoesPdf(modo)}
+</body></html>`;
+};
+
+window.abrirPdfDocumento = function(idOuDoc, modo) {
+    const doc = typeof idOuDoc === 'object' && idOuDoc
+        ? idOuDoc
+        : documentos.find(x => x.id === idOuDoc);
+    if (!doc) return Swal.fire('Atenção', 'Documento não encontrado', 'warning');
+    const html = window._montarHtmlNotaA4(doc, modo || 'loja');
+    const w = window.open('', '_blank', 'width=820,height=900');
+    if (!w) return Swal.fire('Atenção', 'Permita pop-ups para abrir o PDF/impressão A4', 'warning');
+    w.document.write(html);
+    w.document.close();
 };
 
 window.excluirDoc = async function(id) {
