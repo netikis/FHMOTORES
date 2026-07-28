@@ -145,6 +145,7 @@
         .tab-caixa.active { background: #0056b3; color: #fff; border-color: var(--gold); }
         .tab-caixa.ml.active { background: #ffe600; color: #2d3277; }
         .tab-caixa.nu.active { background: #820ad1; color: #fff; }
+        .tab-caixa.ni.active { background: #9b59b6; color: #fff; }
         .tab-caixa.pp.active { background: #21c25e; color: #fff; }
         .cart-item { display: flex; justify-content: space-between; padding: 8px 12px; background: #3a4e61; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
         .cart-total { font-size: 22px; color: var(--success); font-weight: 800; text-align: right; margin-top: 10px; }
@@ -240,9 +241,9 @@
                 <span>🏦</span> <span class="txt">Caixas / Bancos</span> <span class="menu-seta">▼</span>
             </button>
             <div class="menu-submenu" id="submenuCaixas">
-                <button class="menu-btn menu-sub" data-sec="secCaixas"><span>💰</span> <span class="txt">Mercado Pago / PicPay Emp.</span></button>
-                <button class="menu-btn menu-sub" data-sec="secPessoal"><span>👤</span> <span class="txt">Despesas Pessoais (Nubank)</span></button>
-                <button class="menu-btn menu-sub" data-sec="secMotores"><span>🔧</span> <span class="txt">Contas dos Motores</span></button>
+                <button class="menu-btn menu-sub" data-sec="secCaixas"><span>💰</span> <span class="txt">Caixas (MP / PicPay / Nubank)</span></button>
+                <button class="menu-btn menu-sub" data-sec="secPessoal"><span>👤</span> <span class="txt">Pessoal / Nubank Investimentos (Lucro)</span></button>
+                <button class="menu-btn menu-sub" data-sec="secBoletosForn"><span>📎</span> <span class="txt">Boletos Fornecedor</span></button>
             </div>
         </div>
         <div class="menu-grupo-titulo">Sistema</div>
@@ -563,10 +564,10 @@
                         <div class="col">
                             <label>Destino Caixa (quando pago)</label>
                             <select id="vendaTipoCaixa" onchange="atualizarSplitCaixaUI()">
-                                <option value="COMPLETA">Completa: custo peças → MP | M.O.+lucro → Nubank</option>
-                                <option value="MERCADO_PAGO">Peças internet: custo → MP | lucro → Nubank</option>
-                                <option value="PICPAY_EMP">Fornecedor: custo → PicPay | lucro → Nubank</option>
-                                <option value="NUBANK">Só M.O. / pessoal → Nubank</option>
+                                <option value="COMPLETA">Completa: gastos → MP | M.O. → Nubank Emp. | lucro → Invest.</option>
+                                <option value="MERCADO_PAGO">Peças internet: gastos → MP | M.O. → Emp. | lucro → Invest.</option>
+                                <option value="PICPAY_EMP">Fornecedor: gastos → PicPay | M.O. → Emp. | lucro → Invest.</option>
+                                <option value="NUBANK">Só M.O. → Nubank Empresa</option>
                             </select>
                         </div>
                         <div class="col"><label>Data</label><input type="date" id="vendaData"></div>
@@ -727,13 +728,16 @@
             <div class="card">
                 <h2>Controle de Caixas da Empresa</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    <strong>Mercado Pago</strong> = reposição do custo das peças/rolamentos &nbsp;|&nbsp;
-                    <strong>Nubank</strong> = mão de obra (rebobinamento) + lucro das peças &nbsp;|&nbsp;
-                    <strong>PicPay Empresas</strong> = compras/boletos de fornecedor (capacitor, ventoinha…)
+                    Como no caderno: <strong>Mercado Pago</strong> = <strong>gastos</strong> (custo rolamento/peças) &nbsp;|&nbsp;
+                    <strong>Nubank Empresa</strong> = <strong>mão de obra</strong> (rebobinamento, troca de cabos…) &nbsp;|&nbsp;
+                    <strong>Nubank Investimentos</strong> = <strong>lucro</strong> &nbsp;|&nbsp;
+                    <strong>PicPay Emp.</strong> = gastos de fornecedor.
                 </p>
                 <div class="tabs-caixa">
-                    <div class="tab-caixa ml active" data-conta="mercadopago" onclick="selecionarCaixa('mercadopago',this)">🤝 Mercado Pago (Peças)</div>
-                    <div class="tab-caixa pp" data-conta="picpayempresas" onclick="selecionarCaixa('picpayempresas',this)">🏢 PicPay Emp. (Fornecedor)</div>
+                    <div class="tab-caixa ml active" data-conta="mercadopago" onclick="selecionarCaixa('mercadopago',this)">🤝 Mercado Pago (Gastos/Peças)</div>
+                    <div class="tab-caixa pp" data-conta="picpayempresas" onclick="selecionarCaixa('picpayempresas',this)">🏢 PicPay Emp. (Forn.)</div>
+                    <div class="tab-caixa nu" data-conta="nubank" onclick="selecionarCaixa('nubank',this)">💜 Nubank Empresa (M.O.)</div>
+                    <div class="tab-caixa ni" data-conta="nubank_invest" onclick="selecionarCaixa('nubank_invest',this)">💎 Nubank Investimentos (Lucro)</div>
                 </div>
                 <div class="dash-grid" id="dashCaixa">
                     <div class="dash-card"><div class="lbl">Saldo Inicial</div><div class="valor" id="cxIni">R$ 0</div></div>
@@ -746,6 +750,7 @@
                     <button class="btn-saida" onclick="abrirModalLanc('SAIDA')">➖ Saída</button>
                     <button class="btn-gold btn-sm" onclick="definirSaldoInicial()">💰 Saldo Inicial</button>
                     <button class="btn-info btn-sm" onclick="fechamentoCaixaDia()">📅 Fechamento do Dia</button>
+                    <button class="btn-danger btn-sm" onclick="corrigirSplitsVendasPagas()" title="Corrige lançamentos antigos que colocaram o total inteiro no MP">🔧 Corrigir splits antigos</button>
                 </div>
                 <div class="card" id="painelFechamentoDia" style="display:none;margin-top:12px;background:var(--panel-dark)">
                     <h2 style="font-size:14px">Fechamento do Caixa — Hoje</h2>
@@ -763,60 +768,62 @@
         <!-- CONTAS PESSOAIS -->
         <section id="secPessoal" class="section">
             <div class="card">
-                <h2>Despesas Pessoais / Boletos Pessoais (Nubank)</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">Controle financeiro <strong>pessoal</strong> via Nubank — separado do caixa da oficina. Use para boletos pessoais e mão de obra recebida.</p>
+                <h2>Pessoal / Nubank Investimentos (Lucro)</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">
+                    Aqui entra o <strong>lucro</strong> das vendas (Nubank Investimentos) e os <strong>seus gastos pessoais</strong>
+                    (roupa, crediário, cartão, à vista). A <strong>mão de obra</strong> fica em Caixas → Nubank Empresa.
+                </p>
                 <div class="dash-grid">
-                    <div class="dash-card"><div class="lbl">Entradas (Nubank)</div><div class="valor" id="pEnt" style="color:#2ecc71">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Saídas / Boletos</div><div class="valor" id="pSai" style="color:#e74c3c">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl">Entradas (Lucro)</div><div class="valor" id="pEnt" style="color:#2ecc71">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl">Saídas / Gastos Pessoais</div><div class="valor" id="pSai" style="color:#e74c3c">R$ 0</div></div>
                     <div class="dash-card"><div class="lbl">Saldo Pessoal</div><div class="valor" id="pSaldo">R$ 0</div></div>
                 </div>
                 <div class="toolbar">
                     <button class="btn-entrada" onclick="abrirModalPessoal('ENTRADA')">➕ Entrada Pessoal</button>
-                    <button class="btn-saida" onclick="abrirModalPessoal('SAIDA')">➖ Despesa / Boleto Pessoal</button>
+                    <button class="btn-saida" onclick="abrirModalPessoal('SAIDA')">➖ Gasto Pessoal (saída)</button>
                 </div>
                 <div style="overflow-x:auto">
-                    <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Ações</th></tr></thead>
+                    <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Categoria</th><th>Forma</th><th>Valor</th><th>Ações</th></tr></thead>
                     <tbody id="tbPessoal"></tbody></table>
                 </div>
             </div>
         </section>
 
-        <!-- CONTAS MOTORES -->
-        <section id="secMotores" class="section">
+        <!-- BOLETOS FORNECEDOR -->
+        <section id="secBoletosForn" class="section">
             <div class="card">
-                <h2>Contas dos Motores Elétricos em Serviço</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">Custos e receitas por motor elétrico (rebobinamento, rolamentos, selos, etc.).</p>
+                <h2>📎 Boletos / Gastos de Fornecedor</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">
+                    Pasta para boletos da <strong>Filco</strong>, capacitor, cabo, ventoinha etc.
+                    Informe o <strong>vencimento</strong> — o sistema avisa 3 dias antes e quando vencer.
+                </p>
                 <div class="bloco">
                     <div class="row">
-                        <div class="col" style="flex:2"><label>Descrição do Motor / Serviço</label><input id="motDesc" placeholder="Ex: Rebob. motor 0,75 cv 2 polos — Cliente Joselton"></div>
-                        <div class="col"><label>Cliente</label><input id="motCliente" list="dlClientesMot"><datalist id="dlClientesMot"></datalist></div>
-                        <div class="col"><label>Nº Série</label><input id="motPlaca" placeholder="Identificação"></div>
+                        <div class="col" style="flex:2"><label>Fornecedor / Descrição</label>
+                            <input id="bolFornDesc" placeholder="Ex: Boleto Filco — capacitor / cabo / rolamento">
+                        </div>
+                        <div class="col"><label>Valor (R$)</label><input type="number" step="0.01" id="bolFornValor" placeholder="0,00"></div>
+                        <div class="col"><label>Vencimento</label><input type="date" id="bolFornVenc"></div>
                     </div>
-                    <button class="btn-primary" onclick="criarContaMotor()">➕ Nova Conta de Motor</button>
-                </div>
-            </div>
-            <div class="card" id="painelMotorDetalhe" style="display:none">
-                <h2 id="tituloMotorAtivo">Motor Selecionado</h2>
-                <div class="dash-grid">
-                    <div class="dash-card"><div class="lbl">Custos</div><div class="valor" id="motCustos" style="color:#e74c3c">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Receitas</div><div class="valor" id="motReceitas" style="color:#2ecc71">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Resultado</div><div class="valor" id="motResultado">R$ 0</div></div>
-                </div>
-                <div class="toolbar">
-                    <button class="btn-entrada btn-sm" onclick="lancarMotor('ENTRADA')">➕ Receita</button>
-                    <button class="btn-saida btn-sm" onclick="lancarMotor('SAIDA')">➖ Custo/Despesa</button>
-                    <button class="btn-danger btn-sm" onclick="fecharContaMotor()">Fechar Conta</button>
-                </div>
-                <div style="overflow-x:auto">
-                    <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead>
-                    <tbody id="tbMotorExtrato"></tbody></table>
+                    <div class="row">
+                        <div class="col"><label>Status</label>
+                            <select id="bolFornStatus">
+                                <option value="ABERTO">Aberto</option>
+                                <option value="PAGO">Pago</option>
+                            </select>
+                        </div>
+                        <div class="col"><label>Obs.</label><input id="bolFornObs" placeholder="Nº boleto, parcela..."></div>
+                    </div>
+                    <button class="btn-primary" onclick="salvarBoletoFornecedor()">💾 Salvar boleto</button>
                 </div>
             </div>
             <div class="card">
-                <h2>Motores em Andamento</h2>
+                <div class="toolbar"><input class="search" id="buscaBolForn" placeholder="Buscar fornecedor / descrição..." oninput="renderBoletosFornecedor()"></div>
                 <div style="overflow-x:auto">
-                    <table><thead><tr><th>Descrição</th><th>Cliente</th><th>Nº Série</th><th>Custos</th><th>Receitas</th><th>Resultado</th><th>Ações</th></tr></thead>
-                    <tbody id="tbMotores"></tbody></table>
+                    <table>
+                        <thead><tr><th>Vencimento</th><th>Fornecedor / Descrição</th><th>Valor</th><th>Status</th><th>Obs.</th><th>Ações</th></tr></thead>
+                        <tbody id="tbBoletosForn"></tbody>
+                    </table>
                 </div>
             </div>
         </section>
@@ -867,8 +874,23 @@
                 </form>
             </div>
             <div class="card">
+                <h2>💾 Backup dos Dados</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">
+                    O FH MOTORES salva <strong>somente neste computador</strong> (não usa o banco do FH CONTROL).
+                    <strong>Exporte um backup</strong> com frequência. Se um dia abrir zerado, use <strong>Importar Backup</strong>.
+                </p>
+                <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+                    <button type="button" class="btn-success" onclick="exportarBackupFH()">⬇️ Exportar Backup (.json)</button>
+                    <label class="btn-gold" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;padding:8px 14px">
+                        ⬆️ Importar Backup
+                        <input type="file" accept=".json,application/json" style="display:none" onchange="importarBackupFH(this.files[0]); this.value='';">
+                    </label>
+                </div>
+                <p id="infoPersistencia" style="font-size:11px;color:var(--muted);margin-top:10px"></p>
+            </div>
+            <div class="card">
                 <h2>Firebase</h2>
-                <p style="font-size:12px;color:var(--muted)">Modo <strong>local</strong> — dados salvos no navegador deste computador. Quando for subir pro site, ative o Firebase em <strong>FIREBASE/firebase-chave.js</strong>.</p>
+                <p style="font-size:12px;color:var(--muted)">Desconectado do banco do FH CONTROL de propósito — os sistemas <strong>não compartilham</strong> dados. Quando quiser um Firebase só do FH MOTORES, configure em <strong>FIREBASE/firebase-chave.js</strong>.</p>
             </div>
         </section>
     </main>
@@ -891,6 +913,13 @@
             <option value="BOLETO_EMPRESA">Boleto / Despesa Empresa</option>
             <option value="FORNECEDOR">Pagamento Fornecedor</option>
         </select>
+        <label id="lblFormaLanc" style="display:none">Forma (à vista / cartão / crediário)</label>
+        <select id="lancForma" style="display:none">
+            <option value="A_VISTA">À vista</option>
+            <option value="CARTAO">Cartão</option>
+            <option value="CREDIARIO">Crediário</option>
+            <option value="">—</option>
+        </select>
         <button class="btn-primary" style="width:100%;margin-top:10px;padding:12px" onclick="salvarLancamento()">Confirmar</button>
     </div>
 </div>
@@ -906,10 +935,10 @@
         <select id="convStatus"><option value="PAGO">✅ Pago</option><option value="PENDENTE">⏳ Pendente (Contas a Receber)</option></select>
         <label>Tipo de Venda (define caixa)</label>
         <select id="convTipoVenda">
-            <option value="COMPLETA">Completa: custo peças → MP | M.O.+lucro → Nubank</option>
-            <option value="MERCADO_PAGO">Peças internet: custo → MP | lucro → Nubank</option>
-            <option value="PICPAY_EMP">Fornecedor: custo → PicPay | lucro → Nubank</option>
-            <option value="NUBANK">Só M.O. / pessoal → Nubank</option>
+            <option value="COMPLETA">Completa: gastos → MP | M.O. → Emp. | lucro → Invest.</option>
+            <option value="MERCADO_PAGO">Peças internet: gastos → MP | M.O. → Emp. | lucro → Invest.</option>
+            <option value="PICPAY_EMP">Fornecedor: gastos → PicPay | M.O. → Emp. | lucro → Invest.</option>
+            <option value="NUBANK">Só M.O. → Nubank Empresa</option>
         </select>
         <label>Forma de Pagamento</label>
         <select id="convFormaPgto">
@@ -936,7 +965,7 @@ window.abrirSecao = function(id, btn) {
     if (btn) btn.classList.add('active');
     var grupos = [
         { secs: ['secOrcamentos', 'secOrcamentosAberto', 'secLancarVenda', 'secVendas'], grupo: 'menuGrupoVendas', toggle: 'btnMenuVendas' },
-        { secs: ['secCaixas', 'secPessoal', 'secMotores'], grupo: 'menuGrupoCaixas', toggle: 'btnMenuCaixas' }
+        { secs: ['secCaixas', 'secPessoal', 'secBoletosForn'], grupo: 'menuGrupoCaixas', toggle: 'btnMenuCaixas' }
     ];
     grupos.forEach(function(g) {
         if (g.secs.indexOf(id) < 0) return;
@@ -984,8 +1013,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// ==================== BANCO LOCAL (localStorage) — sem Firebase por enquanto ====================
+// ==================== BANCO LOCAL (localStorage + IndexedDB) ====================
 const LS_KEY = 'fhmotores_dados';
+const IDB_NAME = 'fhmotores_db';
+const IDB_STORE = 'backup';
+const IDB_KEY = 'dados';
 
 function storeDefault() {
     return {
@@ -993,16 +1025,20 @@ function storeDefault() {
         contas: {
             mercadopago: { extrato: {}, status: { saldoInicial: 0 } },
             picpayempresas: { extrato: {}, status: { saldoInicial: 0 } },
-            nubank: { extrato: {}, status: { saldoInicial: 0 } }
+            nubank: { extrato: {}, status: { saldoInicial: 0 } },
+            nubank_invest: { extrato: {}, status: { saldoInicial: 0 } }
         },
         contasPessoais: { extrato: {} },
         motores: {},
+        boletosFornecedor: {},
         docsAnexos: {},
-        empresa: { nome: 'FH MOTORES' }
+        empresa: { nome: 'FH MOTORES' },
+        _meta: { salvoEm: null, versao: 1 }
     };
 }
 
 function migrarContasLegadas(data) {
+    if (!data || typeof data !== 'object') data = storeDefault();
     if (!data.contas || typeof data.contas !== 'object') data.contas = {};
     const c = data.contas;
     if (c.mercadolivre && !c.mercadopago) {
@@ -1016,24 +1052,172 @@ function migrarContasLegadas(data) {
     if (!c.mercadopago) c.mercadopago = { extrato: {}, status: { saldoInicial: 0 } };
     if (!c.picpayempresas) c.picpayempresas = { extrato: {}, status: { saldoInicial: 0 } };
     if (!c.nubank) c.nubank = { extrato: {}, status: { saldoInicial: 0 } };
+    if (!c.nubank_invest) c.nubank_invest = { extrato: {}, status: { saldoInicial: 0 } };
+    if (!data.boletosFornecedor) data.boletosFornecedor = {};
+    if (!data.contasPessoais) data.contasPessoais = { extrato: {} };
+    if (!data.docsAnexos) data.docsAnexos = {};
+    if (!data.clientes) data.clientes = {};
+    if (!data.produtos) data.produtos = {};
+    if (!data.servicos) data.servicos = {};
+    if (!data.documentos) data.documentos = {};
+    if (!data.motores) data.motores = {};
+    if (!data.empresa) data.empresa = { nome: 'FH MOTORES' };
     return data;
 }
 
-function loadStore() {
+function contarRegistros(data) {
+    const d = data || {};
+    const n = (o) => (o && typeof o === 'object') ? Object.keys(o).length : 0;
+    return {
+        clientes: n(d.clientes),
+        produtos: n(d.produtos),
+        documentos: n(d.documentos),
+        servicos: n(d.servicos),
+        total: n(d.clientes) + n(d.produtos) + n(d.documentos) + n(d.servicos)
+    };
+}
+
+function storeTemDados(data) {
+    return contarRegistros(data).total > 0;
+}
+
+function parseStoreRaw(raw) {
+    if (!raw) return null;
     try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return storeDefault();
-        const parsed = migrarContasLegadas(Object.assign(storeDefault(), JSON.parse(raw)));
-        return parsed;
-    } catch (e) { return storeDefault(); }
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return migrarContasLegadas(Object.assign(storeDefault(), parsed));
+    } catch (e) { return null; }
+}
+
+function loadStoreFromLocalStorage() {
+    try {
+        return parseStoreRaw(localStorage.getItem(LS_KEY));
+    } catch (e) { return null; }
+}
+
+function openIdb() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) return reject(new Error('IndexedDB indisponível'));
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('Falha IndexedDB'));
+    });
+}
+
+async function idbGetDados() {
+    try {
+        const db = await openIdb();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+            req.onsuccess = () => {
+                const v = req.result;
+                db.close();
+                if (!v) return resolve(null);
+                if (typeof v === 'string') return resolve(parseStoreRaw(v));
+                resolve(migrarContasLegadas(Object.assign(storeDefault(), v)));
+            };
+            req.onerror = () => { db.close(); reject(req.error); };
+        });
+    } catch (e) { return null; }
+}
+
+async function idbSetDados(data) {
+    try {
+        const db = await openIdb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(data, IDB_KEY);
+            tx.oncomplete = () => { db.close(); resolve(); };
+            tx.onerror = () => { db.close(); reject(tx.error); };
+        });
+        return true;
+    } catch (e) {
+        console.warn('Falha ao gravar IndexedDB', e);
+        return false;
+    }
+}
+
+function atualizarStatusPersistencia(ok, extra) {
+    const el = document.getElementById('statusFirebase');
+    if (!el) return;
+    const c = contarRegistros(store);
+    const hora = (store && store._meta && store._meta.salvoEm) ? store._meta.salvoEm : '';
+    if (ok === false) {
+        el.textContent = '⚠ Erro ao salvar — use Backup em Configurações';
+        el.style.color = '#e74c3c';
+        return;
+    }
+    el.textContent = '● Modo Local (' + c.clientes + ' cli · ' + c.documentos + ' docs)' + (hora ? ' · ' + hora : '');
+    el.style.color = '#f1c40f';
+}
+
+function loadStore() {
+    const fromLs = loadStoreFromLocalStorage();
+    if (fromLs && storeTemDados(fromLs)) return fromLs;
+    if (fromLs) return fromLs;
+    return storeDefault();
 }
 
 let store = loadStore();
-saveStore(); // persiste migração de chaves legadas (mercadolivre→mercadopago, etc.)
+let _salvando = false;
+let _ultimoErroSalvar = null;
 
 function saveStore() {
     store = migrarContasLegadas(store);
-    localStorage.setItem(LS_KEY, JSON.stringify(store));
+    if (!store._meta) store._meta = {};
+    store._meta.salvoEm = new Date().toLocaleString('pt-BR');
+    store._meta.versao = 1;
+    const json = JSON.stringify(store);
+    try {
+        localStorage.setItem(LS_KEY, json);
+        _ultimoErroSalvar = null;
+        // espelho no IndexedDB (não bloqueia a UI)
+        idbSetDados(store).then(() => atualizarStatusPersistencia(true));
+        atualizarStatusPersistencia(true);
+        return true;
+    } catch (e) {
+        _ultimoErroSalvar = e;
+        console.error('Falha ao salvar localStorage', e);
+        // tenta IndexedDB mesmo se LS falhar (quota)
+        idbSetDados(store);
+        atualizarStatusPersistencia(false);
+        if (String(e && e.name).includes('Quota') || String(e && e.message).toLowerCase().includes('quota')) {
+            setTimeout(() => {
+                if (window.Swal) Swal.fire({
+                    icon: 'error',
+                    title: 'Memória do navegador cheia',
+                    html: 'Os dados desta sessão podem se perder ao fechar.<br><br>Vá em <b>Configurações → Exportar Backup</b> agora e salve o arquivo no computador.'
+                });
+            }, 100);
+        }
+        return false;
+    }
+}
+
+async function recuperarDoIndexedDbSePreciso() {
+    try {
+        if (storeTemDados(store)) {
+            saveStore(); // garante espelho IDB
+            return false;
+        }
+        const fromIdb = await idbGetDados();
+        if (fromIdb && storeTemDados(fromIdb)) {
+            store = fromIdb;
+            saveStore();
+            return true;
+        }
+        saveStore();
+        return false;
+    } catch (e) {
+        console.warn(e);
+        return false;
+    }
 }
 
 function genId() {
@@ -1112,11 +1296,57 @@ async function dbGet(path) {
     return { val: () => getNested(store, path) };
 }
 
+window.exportarBackupFH = function() {
+    try {
+        const json = JSON.stringify(store, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const a = document.createElement('a');
+        const d = new Date();
+        const nome = 'backup-fh-motores-' + d.toISOString().slice(0,10) + '.json';
+        a.href = URL.createObjectURL(blob);
+        a.download = nome;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        if (window.Swal) Swal.fire({ icon:'success', title:'Backup baixado!', text: nome, timer: 2200, showConfirmButton:false });
+    } catch (e) {
+        alert('Erro ao exportar: ' + e.message);
+    }
+};
+
+window.importarBackupFH = function(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+        try {
+            const parsed = parseStoreRaw(ev.target.result);
+            if (!parsed || !storeTemDados(parsed)) {
+                return Swal.fire('Arquivo inválido', 'Este backup não contém cadastros.', 'warning');
+            }
+            const c = contarRegistros(parsed);
+            const conf = await Swal.fire({
+                title: 'Restaurar backup?',
+                html: `Isso <b>substitui</b> os dados atuais por:<br>
+                    ${c.clientes} clientes · ${c.produtos} produtos · ${c.documentos} orçamentos/vendas`,
+                icon: 'warning', showCancelButton: true,
+                confirmButtonText: 'Restaurar', cancelButtonText: 'Cancelar'
+            });
+            if (!conf.isConfirmed) return;
+            store = parsed;
+            saveStore();
+            refreshFromStore();
+            Swal.fire({ icon:'success', title:'Backup restaurado!', timer: 2000, showConfirmButton:false });
+        } catch (e) {
+            Swal.fire('Erro', e.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+};
+
 // ==================== GLOBAIS ====================
 let clientes = [], produtos = [], servicos = [], documentos = [];
-let extratos = { mercadopago: [], picpayempresas: [], nubank: [] };
-let saldosIniciais = { mercadopago: 0, picpayempresas: 0, nubank: 0 };
-let pessoalExtrato = [], motores = [], motorAtivoId = null;
+let extratos = { mercadopago: [], picpayempresas: [], nubank: [], nubank_invest: [] };
+let saldosIniciais = { mercadopago: 0, picpayempresas: 0, nubank: 0, nubank_invest: 0 };
+let pessoalExtrato = [], motores = [], motorAtivoId = null, boletosFornecedor = [];
 let docsAnexos = [];
 let editandoCliId = null, editandoProdId = null, editandoServId = null, editandoOrcId = null, editandoVendaId = null;
 let carrinhoOrc = [], carrinhoVenda = [], contaCaixaAtiva = 'mercadopago';
@@ -1128,23 +1358,27 @@ const agora = () => new Date().toLocaleString('pt-BR');
 
 function rotuloCaixaVenda(tipo) {
     const map = {
-        MERCADO_PAGO: 'MP custo + Nubank lucro',
-        PICPAY_EMP: 'PicPay custo + Nubank lucro',
-        NUBANK: 'Nubank',
-        COMPLETA: 'MP custo + Nubank M.O./lucro',
+        MERCADO_PAGO: 'MP gastos + Emp. M.O. + Invest. lucro',
+        PICPAY_EMP: 'PicPay gastos + Emp. M.O. + Invest. lucro',
+        NUBANK: 'Nubank Empresa (M.O.)',
+        COMPLETA: 'MP gastos + Emp. M.O. + Invest. lucro',
         APENAS_PECAS: 'PicPay Emp.',
-        APENAS_MO: 'Nubank'
+        APENAS_MO: 'Nubank Empresa (M.O.)'
     };
     return map[tipo] || tipo || '-';
 }
 
-function refreshFromStore() {
-    store = loadStore();
+function refreshFromStore(fromDisk) {
+    // IMPORTANTE: não recarregar do disco a cada lançamento — isso apagava dados se o save falhasse.
+    if (fromDisk) {
+        const loaded = loadStore();
+        if (loaded) store = loaded;
+    }
     clientes = objToList(store.clientes).sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
     produtos = objToList(store.produtos);
     servicos = objToList(store.servicos || {}).sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
     documentos = objToList(store.documentos).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
-    ['mercadopago','picpayempresas','nubank'].forEach(conta => {
+    ['mercadopago','picpayempresas','nubank','nubank_invest'].forEach(conta => {
         extratos[conta] = objToList(getNested(store, 'contas/'+conta+'/extrato')).sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
         const st = getNested(store, 'contas/'+conta+'/status');
         saldosIniciais[conta] = st ? (st.saldoInicial||0) : 0;
@@ -1169,13 +1403,21 @@ function refreshFromStore() {
         if (document.getElementById('empLogoB64')) document.getElementById('empLogoB64').value = emp.logo || '';
     }
     docsAnexos = objToList(store.docsAnexos).sort((a,b) => (a.vencimento||'').localeCompare(b.vencimento||''));
+    boletosFornecedor = objToList(store.boletosFornecedor || {}).sort((a,b) => (a.vencimento||'').localeCompare(b.vencimento||''));
     renderDocumentos();
     monitorarVencimentosDocumentos();
     renderClientes(); renderProdutos(); renderServicos(); renderOrcamentos(); renderVendas();
-    renderExtratoCaixa(); atualizarDashCaixa(); renderPessoal(); renderMotores();
-    if (motorAtivoId) renderMotorDetalhe();
+    renderExtratoCaixa(); atualizarDashCaixa(); renderPessoal(); renderBoletosFornecedor();
     atualizarDatalists();
     atualizarSelectServicosOrc();
+    atualizarStatusPersistencia(true);
+    const info = document.getElementById('infoPersistencia');
+    if (info) {
+        const ct = contarRegistros(store);
+        info.textContent = 'Agora no sistema: ' + ct.clientes + ' cliente(s), ' + ct.produtos + ' produto(s), ' +
+            ct.documentos + ' orçamento(s)/venda(s), ' + ct.servicos + ' serviço(s) na tabela. ' +
+            (store._meta && store._meta.salvoEm ? 'Último salvamento: ' + store._meta.salvoEm + '.' : '');
+    }
 }
 
 function mascaraTel(el) {
@@ -1573,7 +1815,8 @@ window.renderServicos = renderServicos;
 function atualizarDatalists() {
     const optsCli = clientes.map(c => `<option value="${c.nome}">`).join('');
     document.getElementById('dlClientes').innerHTML = optsCli;
-    document.getElementById('dlClientesMot').innerHTML = optsCli;
+    const dlMot = document.getElementById('dlClientesMot');
+    if (dlMot) dlMot.innerHTML = optsCli;
     const dlCV = document.getElementById('dlClientesVenda');
     if (dlCV) dlCV.innerHTML = optsCli;
     const optsProd = produtos.map(p => {
@@ -1665,12 +1908,15 @@ function itensDocParaCarrinhoVenda(itens) {
 function itensCarrinhoParaDoc(itens) {
     return itens.map(it => {
         const qtd = Number(it.qtdBaixa) || 1;
-        const ehServ = (it.categoriaOS || '') === 'servico';
+        const ehServ = (it.categoriaOS || '') === 'servico' || String(it.nome || '').includes('[M.O.]');
+        const total = Number(it.valor) || 0;
+        const custoUn = Number(it.custoOriginal != null ? it.custoOriginal : it.valorPago) || 0;
         return {
-            nome: it.nome, qtd, qtdBaixa: qtd, valor: it.valorOriginal || (it.valor / qtd), total: it.valor,
-            tipo: ehServ ? 'servico' : 'peca', categoriaOS: it.categoriaOS || 'material',
+            nome: it.nome, qtd, qtdBaixa: qtd, valor: it.valorOriginal || (qtd > 0 ? total / qtd : total), total,
+            tipo: ehServ ? 'servico' : 'peca', categoriaOS: ehServ ? 'servico' : 'material',
             idProd: it.idProd, ehEstoque: !!it.ehEstoque, unidadeMedida: it.unidadeMedida,
-            custoOriginal: it.custoOriginal, margemOriginal: it.margemOriginal
+            custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
+            margemOriginal: it.margemOriginal
         };
     });
 }
@@ -1838,7 +2084,8 @@ function calcSplitCaixaVenda() {
     carrinhoVenda.forEach(i => {
         const cobrado = i.valor || 0;
         const custo = Number(i.custoOriginal != null ? (i.custoOriginal * (i.qtdBaixa || 1)) : 0) || 0;
-        const ehServ = (i.categoriaOS || '') === 'servico' || String(i.nome || '').includes('[M.O.]');
+        const ehServ = (i.categoriaOS || '') === 'servico' || String(i.nome || '').includes('[M.O.]') ||
+            String(i.nome || '').toLowerCase().includes('rebob');
         if (ehServ) totalMO += cobrado;
         else { totalPecasCobrado += cobrado; totalPecasCusto += custo; }
     });
@@ -1851,15 +2098,22 @@ function atualizarSplitCaixaUI() {
     if (!carrinhoVenda.length) { box.style.display = 'none'; return; }
     const tipo = document.getElementById('vendaTipoCaixa')?.value || 'COMPLETA';
     const s = calcSplitCaixaVenda();
-    let html = '<strong>Divisão do caixa (quando PAGO):</strong><br>';
+    // Caderno Halana: gastos(custo) → MP | M.O. → Nubank Emp. | lucro → Investimentos
+    const gasto = (s.totalPecasCusto > 0) ? s.totalPecasCusto : s.totalPecasCobrado;
+    const lucro = Math.max(0, s.totalPecasCobrado - ((s.totalPecasCusto > 0) ? s.totalPecasCusto : s.totalPecasCobrado));
+    let html = '<strong>Divisão do caixa (igual ao caderno, quando PAGO):</strong><br>';
     if (tipo === 'NUBANK') {
-        html += `💜 Nubank: ${fmt(s.totalMO + s.totalPecasCobrado)} (tudo pessoal/M.O.)`;
+        html += '💜 Nubank Empresa (M.O.): ' + fmt(s.totalMO + s.totalPecasCobrado);
     } else if (tipo === 'PICPAY_EMP') {
-        html += `🏢 PicPay Emp.: ${fmt(s.totalPecasCusto)} (custo peças)<br>💜 Nubank: ${fmt(s.totalMO + s.lucro)} (rebobinamento + lucro)`;
+        html += '🏢 PicPay Emp. (gastos): ' + fmt(gasto) +
+            '<br>💜 Nubank Empresa (M.O.): ' + fmt(s.totalMO) +
+            '<br>💎 Nubank Investimentos (lucro): ' + fmt(lucro);
     } else {
-        html += `🤝 Mercado Pago: ${fmt(s.totalPecasCusto)} (custo/reposição peças)<br>💜 Nubank: ${fmt(s.totalMO + s.lucro)} (rebobinamento + lucro peças)`;
+        html += '🤝 Mercado Pago (gastos): ' + fmt(gasto) +
+            '<br>💜 Nubank Empresa (M.O.): ' + fmt(s.totalMO) +
+            '<br>💎 Nubank Investimentos (lucro): ' + fmt(lucro);
     }
-    html += `<br><span style="color:#f1c40f">Cliente paga o TOTAL cobrado — o sistema NÃO joga o valor inteiro só num caixa.</span>`;
+    html += '<br><span style="color:#f1c40f">Ex. caderno R$ 384: rolamento gasto no MP · M.O. R$ 130 na Empresa · lucro R$ 50 nos Investimentos.</span>';
     box.innerHTML = html; box.style.display = 'block';
 }
 window.atualizarSplitCaixaUI = atualizarSplitCaixaUI;
@@ -2368,44 +2622,68 @@ window.confirmarConversao = async function() {
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
 };
 
-async function lancarVendaNasCaixas(doc, tipoVenda) {
+function itemEhServicoDoc(i) {
+    const nome = String(i.nome || '').toLowerCase();
+    return i.tipo === 'servico' || i.categoriaOS === 'servico' ||
+        nome.includes('[m.o.]') || nome.includes('[mão de obra]') || nome.includes('[mao de obra]') ||
+        nome.includes('rebob') || nome.includes('mão de obra') || nome.includes('mao de obra');
+}
+
+function calcSplitVendaDoc(doc) {
     const itens = doc.itens || [];
     let totalPecasCobrado = 0, totalPecasCusto = 0, totalMO = 0;
     itens.forEach(i => {
-        const cobrado = i.total || i.valor || 0;
-        const custo = Number(i.totalPago != null ? i.totalPago : ((i.valorPago ?? i.custoOriginal ?? 0) * (i.qtd || i.qtdBaixa || 1))) || 0;
-        const ehServ = i.tipo === 'servico' || i.categoriaOS === 'servico' || (i.nome || '').includes('[M.O.]') || (i.nome || '').includes('[Mão de Obra]');
-        if (ehServ) totalMO += cobrado;
+        const cobrado = Number(i.total != null ? i.total : i.valor) || 0;
+        const qtd = Number(i.qtd || i.qtdBaixa) || 1;
+        let custo = 0;
+        if (i.totalPago != null && i.totalPago !== '') custo = Number(i.totalPago) || 0;
+        else if (i.valorPago != null && i.valorPago !== '') custo = (Number(i.valorPago) || 0) * qtd;
+        else if (i.custoOriginal != null && i.custoOriginal !== '') custo = (Number(i.custoOriginal) || 0) * qtd;
+        if (itemEhServicoDoc(i)) totalMO += cobrado;
         else { totalPecasCobrado += cobrado; totalPecasCusto += custo; }
     });
     const lucroPecas = Math.max(0, totalPecasCobrado - totalPecasCusto);
+    return { totalPecasCobrado, totalPecasCusto, totalMO, lucroPecas };
+}
+
+async function lancarVendaNasCaixas(doc, tipoVenda) {
+    const s = calcSplitVendaDoc(doc);
     const num = doc.numeroFmt || doc.numero;
     const desc = `Venda #${num} — ${doc.clienteNome}`;
     const lancar = async (conta, valor, descExtra, categoria) => {
-        if (valor <= 0) return;
+        if (!(valor > 0)) return;
         await dbPush(`contas/${conta}/extrato`, {
-            tipo: 'ENTRADA', descricao: desc + (descExtra||''), valor,
+            tipo: 'ENTRADA', descricao: desc + (descExtra || ''), valor: Math.round(valor * 100) / 100,
             categoria: categoria || 'RECEITA_VENDA',
-            dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda'
+            dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda',
+            splitMO: s.totalMO, splitPecas: s.totalPecasCobrado, splitCusto: s.totalPecasCusto, splitLucro: s.lucroPecas
         });
     };
 
     if (tipoVenda === 'APENAS_PECAS') tipoVenda = 'PICPAY_EMP';
     if (tipoVenda === 'APENAS_MO') tipoVenda = 'NUBANK';
 
-    // Regra Halana: NÃO joga o valor inteiro das peças no MP.
-    // MP/PicPay = reposição do CUSTO das peças | Nubank = M.O. + LUCRO das peças
+    // Regra caderno Halana (áudio 3):
+    // Gastos (custo peças/rolamento) → Mercado Pago / PicPay
+    // Mão de obra → Nubank Empresa
+    // Lucro → Nubank Investimentos
+    const temCusto = s.totalPecasCusto > 0;
+    const gastoPecas = temCusto ? s.totalPecasCusto : s.totalPecasCobrado;
+    const lucroPecas = temCusto ? Math.max(0, s.totalPecasCobrado - s.totalPecasCusto) : 0;
+    const gastoLabel = ` (gastos/custo peças ${fmt(gastoPecas)})`;
+    const moLabel = ` (mão de obra ${fmt(s.totalMO)})`;
+    const lucroLabel = ` (lucro ${fmt(lucroPecas)})`;
+
     if (tipoVenda === 'PICPAY_EMP') {
-        await lancar('picpayempresas', totalPecasCusto, ' (custo peça fornecedor)', 'CUSTO_PECA');
-        await lancar('nubank', totalMO + lucroPecas, ' (M.O. + lucro peças)', 'MAO_DE_OBRA');
+        await lancar('picpayempresas', gastoPecas, gastoLabel, 'GASTOS_PECAS');
+        await lancar('nubank', s.totalMO, moLabel, 'MAO_DE_OBRA');
+        await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
     } else if (tipoVenda === 'NUBANK') {
-        await lancar('nubank', totalMO + totalPecasCobrado, ' (mão de obra/pessoal)', 'MAO_DE_OBRA');
-    } else if (tipoVenda === 'MERCADO_PAGO') {
-        await lancar('mercadopago', totalPecasCusto, ' (custo peças/rolamentos)', 'CUSTO_PECA');
-        await lancar('nubank', totalMO + lucroPecas, ' (M.O. + lucro peças)', 'MAO_DE_OBRA');
-    } else { // COMPLETA
-        await lancar('mercadopago', totalPecasCusto, ' (custo peças)', 'CUSTO_PECA');
-        await lancar('nubank', totalMO + lucroPecas, ' (rebobinamento + lucro peças)', 'MAO_DE_OBRA');
+        await lancar('nubank', s.totalMO + s.totalPecasCobrado, ' (tudo Nubank Empresa)', 'MAO_DE_OBRA');
+    } else { // COMPLETA / MERCADO_PAGO
+        await lancar('mercadopago', gastoPecas, gastoLabel, 'GASTOS_PECAS');
+        await lancar('nubank', s.totalMO, moLabel, 'MAO_DE_OBRA');
+        await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
     }
 }
 
@@ -2623,7 +2901,7 @@ window.estornarPagamento = async function(id) {
     });
     if (!r.isConfirmed) return;
     try {
-        for (const conta of ['mercadopago', 'picpayempresas', 'nubank']) {
+        for (const conta of ['mercadopago', 'picpayempresas', 'nubank', 'nubank_invest']) {
             const idsRemover = (extratos[conta] || [])
                 .filter(e => e.docId === id || (e.origem === 'venda' && String(e.descricao || '').includes(`#${d.numeroFmt || d.numero}`)))
                 .map(e => e.id);
@@ -2922,7 +3200,8 @@ window.fechamentoCaixaDia = function() {
     const contas = [
         { id: 'mercadopago', nome: 'Mercado Pago' },
         { id: 'picpayempresas', nome: 'PicPay Empresas' },
-        { id: 'nubank', nome: 'Nubank (pessoal/M.O.)' }
+        { id: 'nubank', nome: 'Nubank Empresa (M.O.)' },
+        { id: 'nubank_invest', nome: 'Nubank Investimentos (Lucro)' }
     ];
     let html = `<p style="font-size:12px;color:var(--muted)">Movimentações de <strong>${hoje()}</strong> (loja / bancos).</p>`;
     let entG = 0, saiG = 0;
@@ -2995,11 +3274,16 @@ window.abrirModalLanc = function(tipo) {
             <option value="GERAL">Geral</option>
             <option value="BOLETO_EMPRESA">Boleto / Despesa Empresa</option>
             <option value="FORNECEDOR">Pagamento Fornecedor</option>
-            <option value="RECEITA_VENDA">Receita de Venda</option>`;
+            <option value="RECEITA_VENDA">Receita de Venda</option>
+            <option value="MAO_DE_OBRA">Rebobinamento / M.O.</option>`;
         sel.value = tipo === 'SAIDA' ? 'BOLETO_EMPRESA' : 'GERAL';
         sel.style.display = '';
         document.getElementById('lblCatLanc').style.display = '';
     }
+    const lf = document.getElementById('lancForma');
+    const lblF = document.getElementById('lblFormaLanc');
+    if (lf) { lf.style.display = 'none'; lf.value = ''; }
+    if (lblF) lblF.style.display = 'none';
     document.getElementById('tituloModalLanc').textContent = tipo === 'ENTRADA' ? '➕ Entrada Empresa' : '➖ Despesa / Boleto Empresa';
     document.getElementById('modalLanc').classList.add('open');
 };
@@ -3013,14 +3297,21 @@ window.abrirModalPessoal = function(tipo) {
     if (sel) {
         sel.innerHTML = `
             <option value="GERAL">Geral</option>
-            <option value="BOLETO_PESSOAL">Boleto / Despesa Pessoal</option>
-            <option value="MAO_DE_OBRA">Mão de Obra Recebida</option>
+            <option value="GASTO_PESSOAL">Gasto pessoal (roupa, etc.)</option>
+            <option value="BOLETO_PESSOAL">Boleto Pessoal</option>
+            <option value="MAO_DE_OBRA">Rebobinamento / M.O.</option>
             <option value="RECEITA_PESSOAL">Receita Pessoal</option>`;
-        sel.value = tipo === 'SAIDA' ? 'BOLETO_PESSOAL' : 'MAO_DE_OBRA';
+        sel.value = tipo === 'SAIDA' ? 'GASTO_PESSOAL' : 'MAO_DE_OBRA';
         sel.style.display = '';
         document.getElementById('lblCatLanc').style.display = '';
     }
-    document.getElementById('tituloModalLanc').textContent = tipo === 'ENTRADA' ? '➕ Entrada Pessoal (Nubank)' : '➖ Despesa / Boleto Pessoal';
+    const lf = document.getElementById('lancForma');
+    const lblF = document.getElementById('lblFormaLanc');
+    if (lf) { lf.style.display = ''; lf.value = tipo === 'SAIDA' ? 'A_VISTA' : ''; }
+    if (lblF) lblF.style.display = '';
+    document.getElementById('tituloModalLanc').textContent = tipo === 'ENTRADA'
+        ? '➕ Entrada Pessoal / Nubank (Rebobinamento)'
+        : '➖ Gasto Pessoal (à vista / cartão / crediário)';
     document.getElementById('modalLanc').classList.add('open');
 };
 
@@ -3032,13 +3323,12 @@ window.salvarLancamento = async function() {
     if (!desc || isNaN(valor) || valor <= 0) return Swal.fire('Atenção','Preencha descrição e valor','warning');
 
     const categoria = document.getElementById('lancCategoria') ? document.getElementById('lancCategoria').value : 'Geral';
-    const doc = { tipo, descricao: desc, valor, categoria, dataStr: agora(), timestamp: Date.now() };
+    const forma = document.getElementById('lancForma') ? (document.getElementById('lancForma').value || '') : '';
+    const doc = { tipo, descricao: desc, valor, categoria, forma, dataStr: agora(), timestamp: Date.now() };
 
     try {
         if (ctx === 'pessoal') {
             await dbPush('contasPessoais/extrato', doc);
-        } else if (ctx === 'motor' && motorAtivoId) {
-            await dbPush(`motores/${motorAtivoId}/extrato`, doc);
         } else {
             await dbPush(`contas/${contaCaixaAtiva}/extrato`, doc);
         }
@@ -3064,24 +3354,26 @@ window.excluirLancCaixa = async function(conta, id) {
 // ==================== PESSOAL ====================
 function renderPessoal() {
     let ent = 0, sai = 0;
-    const tb = document.getElementById('tbPessoal'); tb.innerHTML = '';
-    // Entradas de M.O. vindas das vendas (conta Nubank)
-    const moNubank = (extratos.nubank || []).filter(e => e.origem === 'venda' || e.categoria === 'RECEITA_VENDA');
-    moNubank.forEach(e => {
+    const tb = document.getElementById('tbPessoal'); if (!tb) return; tb.innerHTML = '';
+    const formaLabel = { A_VISTA:'À vista', CARTAO:'Cartão', CREDIARIO:'Crediário' };
+    // Lucro das vendas (Nubank Investimentos) — como no caderno
+    const lucros = (extratos.nubank_invest || []).filter(e => e.origem === 'venda' || e.categoria === 'LUCRO' || e.categoria === 'RECEITA_VENDA');
+    lucros.forEach(e => {
         if (e.tipo === 'ENTRADA') ent += parseFloat(e.valor)||0;
         else sai += parseFloat(e.valor)||0;
         const cor = e.tipo === 'ENTRADA' ? '#2ecc71' : '#e74c3c';
         tb.innerHTML += `<tr><td>${e.dataStr||'-'}</td><td style="color:${cor};font-weight:700">${e.tipo}</td>
-        <td>${e.descricao} <small style="color:#f1c40f">(Nubank / Venda)</small></td>
-        <td>Mão de Obra</td><td style="color:${cor}">${fmt(e.valor)}</td>
-        <td><button class="btn-acao" onclick="excluirLancCaixa('nubank','${e.id}')">🗑️</button></td></tr>`;
+        <td>${e.descricao} <small style="color:#f1c40f">(Nubank Investimentos / Lucro)</small></td>
+        <td>Lucro</td><td>—</td><td style="color:${cor}">${fmt(e.valor)}</td>
+        <td><button class="btn-acao" onclick="excluirLancCaixa('nubank_invest','${e.id}')">🗑️</button></td></tr>`;
     });
     pessoalExtrato.forEach(e => {
         if (e.tipo === 'ENTRADA') ent += parseFloat(e.valor)||0; else sai += parseFloat(e.valor)||0;
         const cor = e.tipo === 'ENTRADA' ? '#2ecc71' : '#e74c3c';
-        const catLabel = ({ GERAL:'Geral', BOLETO_PESSOAL:'Boleto Pessoal', MAO_DE_OBRA:'Mão de Obra', RECEITA_PESSOAL:'Receita Pessoal' })[e.categoria] || (e.categoria||'Geral');
+        const catLabel = ({ GERAL:'Geral', GASTO_PESSOAL:'Gasto pessoal', BOLETO_PESSOAL:'Boleto Pessoal', MAO_DE_OBRA:'Rebobinamento', RECEITA_PESSOAL:'Receita Pessoal' })[e.categoria] || (e.categoria||'Geral');
+        const fLab = formaLabel[e.forma] || (e.forma || '—');
         tb.innerHTML += `<tr><td>${e.dataStr}</td><td style="color:${cor};font-weight:700">${e.tipo}</td>
-        <td>${e.descricao}</td><td>${catLabel}</td><td style="color:${cor}">${fmt(e.valor)}</td>
+        <td>${e.descricao}</td><td>${catLabel}</td><td>${fLab}</td><td style="color:${cor}">${fmt(e.valor)}</td>
         <td><button class="btn-acao" onclick="excluirPessoal('${e.id}')">🗑️</button></td></tr>`;
     });
     document.getElementById('pEnt').textContent = fmt(ent);
@@ -3094,88 +3386,113 @@ window.excluirPessoal = async function(id) {
     await dbRemove('contasPessoais/extrato/'+id);
 };
 
-// ==================== MOTORES ====================
-window.criarContaMotor = async function() {
-    const desc = document.getElementById('motDesc').value.trim();
-    if (!desc) return Swal.fire('Atenção','Informe a descrição','warning');
-    const doc = {
-        descricao: desc, cliente: document.getElementById('motCliente').value,
-        placa: document.getElementById('motPlaca').value, status: 'ABERTO',
-        criadoEm: agora(), timestamp: Date.now()
-    };
-    const refNovo = await dbPush('motores', doc);
-    document.getElementById('motDesc').value = ''; document.getElementById('motCliente').value = '';
-    document.getElementById('motPlaca').value = '';
-    abrirMotor(refNovo.key);
-    Swal.fire({ icon:'success', title:'Conta criada!', timer:1500, showConfirmButton:false });
-};
-
-window.abrirMotor = function(id) {
-    motorAtivoId = id;
-    const m = motores.find(x => x.id === id);
-    document.getElementById('painelMotorDetalhe').style.display = 'block';
-    document.getElementById('tituloMotorAtivo').textContent = m ? m.descricao : 'Motor';
-    renderMotorDetalhe();
-};
-
-function renderMotores() {
-    const tb = document.getElementById('tbMotores'); tb.innerHTML = '';
-    motores.filter(m => m.status !== 'FECHADO').forEach(m => {
-        const res = m.resultado||0;
-        const cor = res >= 0 ? '#2ecc71' : '#e74c3c';
-        tb.innerHTML += `<tr><td>${m.descricao}</td><td>${m.cliente||'-'}</td><td>${m.placa||'-'}</td>
-        <td>${fmt(m.custos)}</td><td>${fmt(m.receitas)}</td><td style="color:${cor};font-weight:700">${fmt(res)}</td>
-        <td class="acoes"><button class="btn-acao" onclick="abrirMotor('${m.id}')">📂 Abrir</button>
-        <button class="btn-acao" onclick="fecharMotorLista('${m.id}')">✅ Fechar</button></td></tr>`;
+// ==================== BOLETOS FORNECEDOR ====================
+window.salvarBoletoFornecedor = async function() {
+    const desc = (document.getElementById('bolFornDesc')?.value || '').trim();
+    const valor = parseFloat(document.getElementById('bolFornValor')?.value);
+    const venc = document.getElementById('bolFornVenc')?.value || '';
+    const status = document.getElementById('bolFornStatus')?.value || 'ABERTO';
+    const obs = (document.getElementById('bolFornObs')?.value || '').trim();
+    if (!desc) return Swal.fire('Atenção', 'Informe o fornecedor / descrição', 'warning');
+    if (!venc) return Swal.fire('Atenção', 'Informe a data de vencimento', 'warning');
+    await dbPush('boletosFornecedor', {
+        descricao: desc,
+        valor: isNaN(valor) ? 0 : valor,
+        vencimento: venc,
+        status,
+        obs,
+        criadoEm: agora(),
+        timestamp: Date.now()
     });
+    document.getElementById('bolFornDesc').value = '';
+    document.getElementById('bolFornValor').value = '';
+    document.getElementById('bolFornVenc').value = '';
+    document.getElementById('bolFornObs').value = '';
+    document.getElementById('bolFornStatus').value = 'ABERTO';
+    Swal.fire({ icon: 'success', title: 'Boleto salvo!', timer: 1400, showConfirmButton: false });
+};
+
+function renderBoletosFornecedor() {
+    const tb = document.getElementById('tbBoletosForn');
+    if (!tb) return;
+    const busca = (document.getElementById('buscaBolForn')?.value || '').toLowerCase();
+    tb.innerHTML = '';
+    boletosFornecedor
+        .filter(b => !busca || (b.descricao || '').toLowerCase().includes(busca) || (b.obs || '').toLowerCase().includes(busca))
+        .forEach(b => {
+            const dias = typeof diasAteVencimento === 'function' ? diasAteVencimento(b.vencimento) : null;
+            let badge = '';
+            if (b.status !== 'PAGO' && dias !== null) {
+                if (dias < 0) badge = ' <span class="badge badge-pend">VENCIDO</span>';
+                else if (dias === 0) badge = ' <span class="badge badge-pend">VENCE HOJE</span>';
+                else if (dias <= 3) badge = ' <span class="badge badge-orc">VENCE EM ' + dias + ' DIA(S)</span>';
+            }
+            const st = b.status === 'PAGO'
+                ? '<span class="badge" style="background:#27ae60;color:#fff">PAGO</span>'
+                : '<span class="badge badge-pend">ABERTO</span>';
+            tb.innerHTML += `<tr>
+                <td>${formatarDataBr(b.vencimento)}${badge}</td>
+                <td>${b.descricao || '-'}</td>
+                <td>${fmt(b.valor)}</td>
+                <td>${st}</td>
+                <td>${b.obs || '-'}</td>
+                <td class="acoes">
+                    ${b.status !== 'PAGO' ? `<button class="btn-acao" onclick="marcarBoletoFornPago('${b.id}')" title="Marcar pago">✅</button>` : ''}
+                    <button class="btn-acao" onclick="excluirBoletoForn('${b.id}')">🗑️</button>
+                </td></tr>`;
+        });
 }
+window.renderBoletosFornecedor = renderBoletosFornecedor;
 
-function renderMotorDetalhe() {
-    if (!motorAtivoId) return;
-    const m = motores.find(x => x.id === motorAtivoId);
-    if (!m) return;
-    document.getElementById('motCustos').textContent = fmt(m.custos);
-    document.getElementById('motReceitas').textContent = fmt(m.receitas);
-    const res = m.resultado||0;
-    document.getElementById('motResultado').textContent = fmt(res);
-    document.getElementById('motResultado').style.color = res >= 0 ? '#2ecc71' : '#e74c3c';
+window.marcarBoletoFornPago = async function(id) {
+    await dbUpdate('boletosFornecedor/' + id, { status: 'PAGO', pagoEm: agora() });
+    Swal.fire({ icon: 'success', title: 'Marcado como pago!', timer: 1200, showConfirmButton: false });
+};
 
-    const tb = document.getElementById('tbMotorExtrato'); tb.innerHTML = '';
-    const extr = m.extrato ? Object.entries(m.extrato).map(([k,v]) => ({id:k,...v})).sort((a,b) => (b.timestamp||0)-(a.timestamp||0)) : [];
-    extr.forEach(e => {
-        const cor = e.tipo === 'ENTRADA' ? '#2ecc71' : '#e74c3c';
-        tb.innerHTML += `<tr><td>${e.dataStr}</td><td style="color:${cor}">${e.tipo}</td><td>${e.descricao}</td>
-        <td style="color:${cor}">${fmt(e.valor)}</td>
-        <td><button class="btn-acao" onclick="excluirLancMotor('${e.id}')">🗑️</button></td></tr>`;
+window.excluirBoletoForn = async function(id) {
+    if (!(await Swal.fire({ title: 'Excluir boleto?', icon: 'warning', showCancelButton: true })).isConfirmed) return;
+    await dbRemove('boletosFornecedor/' + id);
+};
+
+// Corrige lançamentos antigos que colocaram o TOTAL da venda no Mercado Pago
+window.corrigirSplitsVendasPagas = async function() {
+    const vendas = documentos.filter(d => d.tipo === 'VENDA' && d.statusPagamento === 'PAGO');
+    if (!vendas.length) return Swal.fire('Info', 'Nenhuma venda paga encontrada.', 'info');
+    const r = await Swal.fire({
+        title: 'Corrigir splits das caixas?',
+        html: `Vai <b>remover</b> os lançamentos antigos de <b>${vendas.length}</b> venda(s) paga(s) e relançar com a regra nova:<br>
+        <b>MP/PicPay = só peças</b> · <b>Nubank = só rebobinamento</b>.`,
+        icon: 'warning', showCancelButton: true,
+        confirmButtonText: '🔧 Corrigir agora', cancelButtonText: 'Cancelar'
     });
-}
-
-window.lancarMotor = function(tipo) {
-    document.getElementById('lancTipo').value = tipo;
-    document.getElementById('lancContexto').value = 'motor';
-    document.getElementById('lancDesc').value = '';
-    document.getElementById('lancValor').value = '';
-    document.getElementById('tituloModalLanc').textContent = tipo === 'ENTRADA' ? '➕ Receita do Motor' : '➖ Custo do Motor';
-    document.getElementById('modalLanc').classList.add('open');
+    if (!r.isConfirmed) return;
+    try {
+        let n = 0;
+        for (const d of vendas) {
+            for (const conta of ['mercadopago', 'picpayempresas', 'nubank', 'nubank_invest']) {
+                const idsRemover = (extratos[conta] || [])
+                    .filter(e => e.docId === d.id || (e.origem === 'venda' && String(e.descricao || '').includes(`#${d.numeroFmt || d.numero}`)))
+                    .map(e => e.id);
+                for (const eid of idsRemover) await dbRemove(`contas/${conta}/extrato/${eid}`);
+            }
+            await lancarVendaNasCaixas({ ...d, id: d.id }, d.tipoVenda || 'COMPLETA');
+            n++;
+        }
+        renderExtratoCaixa(); atualizarDashCaixa(); renderPessoal();
+        Swal.fire({ icon: 'success', title: 'Pronto!', text: n + ' venda(s) corrigida(s).', timer: 2500, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
+    }
 };
 
-window.fecharContaMotor = async function() {
-    if (!motorAtivoId) return;
-    if (!(await Swal.fire({ title:'Fechar conta deste motor?', icon:'question', showCancelButton:true })).isConfirmed) return;
-    await dbUpdate('motores/'+motorAtivoId, { status: 'FECHADO', fechadoEm: agora() });
-    motorAtivoId = null;
-    document.getElementById('painelMotorDetalhe').style.display = 'none';
-};
-
-window.fecharMotorLista = async function(id) {
-    if (!(await Swal.fire({ title:'Fechar conta?', icon:'question', showCancelButton:true })).isConfirmed) return;
-    await dbUpdate('motores/'+id, { status: 'FECHADO', fechadoEm: agora() });
-};
-
-window.excluirLancMotor = async function(lancId) {
-    if (!(await Swal.fire({ title:'Excluir?', icon:'warning', showCancelButton:true })).isConfirmed) return;
-    await dbRemove(`motores/${motorAtivoId}/extrato/${lancId}`);
-};
+// stubs (menu antigo Contas dos Motores removido)
+window.renderMotores = function() {};
+window.criarContaMotor = function() {};
+window.abrirMotor = function() {};
+window.lancarMotor = function() {};
+window.fecharContaMotor = function() {};
+window.fecharMotorLista = function() {};
+window.excluirLancMotor = function() {};
 
 // ==================== CONFIG / LOGO ====================
 document.getElementById('empLogoFile').addEventListener('change', function(e) {
@@ -3358,6 +3675,24 @@ function monitorarVencimentosDocumentos() {
         if (html) cards.push({ html, ts: new Date(d.vencimento).getTime() });
     });
 
+    // Boletos de fornecedor (Filco, cabo, capacitor...)
+    (boletosFornecedor || []).forEach(b => {
+        if (!b.vencimento || b.status === 'PAGO') return;
+        const dias = diasAteVencimento(b.vencimento);
+        if (dias === null || dias > 3) return;
+        const key = 'bol_' + b.id;
+        if (localStorage.getItem(chaveAlertaSilenciadoDoc(key, hojeIso))) return;
+        let titulo = dias < 0 ? 'BOLETO FORN. VENCIDO' : (dias === 0 ? 'BOLETO FORN. VENCE HOJE' : 'BOLETO FORN. VENCE EM ' + dias + ' DIA(S)');
+        const cor = dias <= 0 ? '#d9534f' : '#f0ad4e';
+        window._mapAlertasDocs[key] = b;
+        cards.push({ html: `<div id="card-alerta-doc-${key}" class="card-alerta-venc" style="border-left:8px solid ${cor}">
+            <div style="flex:1"><b style="color:${cor};font-size:13px">${titulo}</b><br>
+            <span style="font-size:12px;font-weight:600">${b.descricao || ''}</span><br>
+            <span style="font-size:11px;color:#666">📅 Venc.: ${formatarDataBr(b.vencimento)} · ${fmt(b.valor)}</span></div>
+            <button type="button" onclick="confirmarLeituraAlertaDoc('${key}')" style="background:#f8f9fa;border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer">OK</button>
+        </div>`, ts: new Date(b.vencimento).getTime() });
+    });
+
     // Orçamentos com validade próxima ou vencida
     documentos.filter(x => x.tipo === 'ORCAMENTO' && x.validade).forEach(o => {
         const dias = diasAteVencimento(o.validade);
@@ -3444,17 +3779,31 @@ document.getElementById('orcData').value = hoje();
 document.getElementById('vendaData').value = hoje();
 gerarNumOrc().then(n => { document.getElementById('orcNumero').value = n; });
 gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; });
-refreshFromStore();
-// Seed tabela de rebobinamento se vazia (valores exemplo — edite depois)
-(async function seedServicosSeVazio() {
-    if (servicos.length) return;
-    const base = [
-        { nome:'Rebobinamento', potencia:'0,75', polos:'2', fase:'Monofásico', valor:410 },
-        { nome:'Rebobinamento', potencia:'1', polos:'2', fase:'Monofásico', valor:450 },
-        { nome:'Rebobinamento', potencia:'2', polos:'2', fase:'Monofásico', valor:520 },
-        { nome:'Rebobinamento', potencia:'3', polos:'2', fase:'Trifásico', valor:580 }
-    ];
-    for (const s of base) await dbPush('servicos', s);
+
+(async function iniciarPersistencia() {
+    const recuperou = await recuperarDoIndexedDbSePreciso();
+    refreshFromStore();
+    if (recuperou && window.Swal) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Dados recuperados!',
+            text: 'Restauramos seu cadastro do backup interno do navegador.',
+            timer: 2800,
+            showConfirmButton: false
+        });
+    }
+    atualizarStatusPersistencia(true, 'local');
+
+    // Seed tabela de rebobinamento só se ainda estiver vazia
+    if (!servicos.length) {
+        const base = [
+            { nome:'Rebobinamento', potencia:'0,75', polos:'2', fase:'Monofásico', valor:410 },
+            { nome:'Rebobinamento', potencia:'1', polos:'2', fase:'Monofásico', valor:450 },
+            { nome:'Rebobinamento', potencia:'2', polos:'2', fase:'Monofásico', valor:520 },
+            { nome:'Rebobinamento', potencia:'3', polos:'2', fase:'Trifásico', valor:580 }
+        ];
+        for (const s of base) await dbPush('servicos', s);
+    }
 })();
 setInterval(monitorarVencimentosDocumentos, 60000);
 
