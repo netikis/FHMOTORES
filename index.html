@@ -3396,15 +3396,49 @@ window._htmlPagamentoNotaDoc = function(doc) {
     return html;
 };
 
-window._rodapeBotoesPdf = function(modo) {
+window._rodapeBotoesPdf = function(modo, numDoc) {
+    const nomeArq = 'FH-MOTORES-Doc-' + String(numDoc || 'nota').replace(/[^\w\-]+/g, '_') + '.pdf';
+    const nomeJs = nomeArq.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const scriptBaixar = `<script>
+async function baixarPdfA4(nome) {
+  try {
+    var btn = document.getElementById('btnBaixarPdf');
+    if (btn) { btn.disabled = true; btn.textContent = 'Gerando PDF...'; }
+    if (!window.html2pdf) {
+      await new Promise(function(res, rej) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+        s.onload = res; s.onerror = function() { rej(new Error('Falha ao carregar html2pdf')); };
+        document.head.appendChild(s);
+      });
+    }
+    var el = document.getElementById('pdf-export-root');
+    await html2pdf().set({
+      margin: [8, 8, 8, 8],
+      filename: nome || 'documento.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(el).save();
+  } catch (e) {
+    alert('Não foi possível baixar o PDF. Use Imprimir → Destino: Salvar como PDF.\\n' + (e && e.message ? e.message : e));
+  } finally {
+    var btn2 = document.getElementById('btnBaixarPdf');
+    if (btn2) { btn2.disabled = false; btn2.textContent = '📄 Baixar PDF'; }
+  }
+}
+<\/script>`;
     if (modo === 'cliente') {
-        return `<div class="pdf-toolbar pdf-toolbar-cliente no-export-pdf">
-            <span class="pdf-toolbar-msg">Envio ao cliente: imprima ou salve como PDF (Ctrl+P → Destino: Salvar como PDF).</span>
+        return `${scriptBaixar}<div class="pdf-toolbar pdf-toolbar-cliente no-export-pdf">
+            <span class="pdf-toolbar-msg">Envio ao cliente: baixe o PDF ou imprima (Ctrl+P).</span>
+            <button type="button" class="btn-pdf-baixar" id="btnBaixarPdf" onclick="baixarPdfA4('${nomeJs}')">📄 Baixar PDF</button>
             <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
         </div>`;
     }
-    return `<div class="pdf-toolbar pdf-toolbar-loja no-export-pdf">
-        <span class="pdf-toolbar-msg">Uso na loja: imprima o papel A4 para entregar ao cliente.</span>
+    return `${scriptBaixar}<div class="pdf-toolbar pdf-toolbar-loja no-export-pdf">
+        <span class="pdf-toolbar-msg">Uso na loja: baixe o PDF ou imprima o papel A4.</span>
+        <button type="button" class="btn-pdf-baixar" id="btnBaixarPdf" onclick="baixarPdfA4('${nomeJs}')">📄 Baixar PDF</button>
         <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
     </div>`;
 };
@@ -3511,6 +3545,9 @@ body {
 .pdf-toolbar-msg { color: #ecf0f1; font-size: 11px; max-width: 320px; line-height: 1.35; }
 .btn-pdf-imprimir { background: #2980b9; color: #fff; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
 .btn-pdf-imprimir:hover { background: #3498db; }
+.btn-pdf-baixar { background: #27ae60; color: #fff; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+.btn-pdf-baixar:hover { background: #2ecc71; }
+.btn-pdf-baixar:disabled { opacity: .7; cursor: wait; }
 @media print {
   body { background: #fff !important; }
   #pdf-export-root { width: auto; max-width: none; margin: 0; }
@@ -3574,7 +3611,7 @@ ${paraCliente ? '<div class="pdf-marca-dagua">CÓPIA PARA CLIENTE — SOMENTE LE
   </div>
   <div class="rodape">Documento gerado eletronicamente pelo sistema ${window._escHtmlNota(empNome)}.${paraCliente ? ' — Versão para envio ao cliente.' : ''} Impressão A4.</div>
 </div>
-${window._rodapeBotoesPdf(modo)}
+${window._rodapeBotoesPdf(modo, num)}
 </body></html>`;
 };
 
