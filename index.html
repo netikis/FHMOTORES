@@ -207,11 +207,27 @@
 </head>
 <body>
 
+<div id="telaLogin" style="display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#0b121b,#1a2a43);align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:400px;background:#162233;border:1px solid rgba(212,160,23,.35);border-radius:14px;padding:22px;color:#ecf0f1;font-family:Poppins,sans-serif">
+        <h2 style="margin:0 0 6px;color:#d4a017;font-size:20px">FH MOTORES</h2>
+        <p style="margin:0 0 16px;font-size:12px;color:#bdc3c7">Login seguro — só quem tem usuário no Firebase entra.</p>
+        <label style="font-size:11px;color:#bdc3c7">E-mail</label>
+        <input id="loginEmail" type="email" autocomplete="username" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:8px;border:1px solid #7f8c8d;background:#1a252f;color:#fff">
+        <label style="font-size:11px;color:#bdc3c7">Senha</label>
+        <input id="loginSenha" type="password" autocomplete="current-password" style="width:100%;margin:4px 0 14px;padding:10px;border-radius:8px;border:1px solid #7f8c8d;background:#1a252f;color:#fff">
+        <button type="button" id="btnLoginEntrar" class="btn-primary" style="width:100%;padding:12px">Entrar</button>
+        <p id="loginErro" style="display:none;color:#e74c3c;font-size:12px;margin-top:10px"></p>
+        <p style="font-size:11px;color:#7f8c8d;margin-top:12px">Crie o usuário em Firebase → Authentication → E-mail/senha.</p>
+    </div>
+</div>
+
 <div class="topbar">
     <span>⚙️</span>
     <strong>FH MOTORES</strong>
     <span>— Gestão de Oficina</span>
     <span id="statusFirebase" class="status-online" style="margin-left:auto;">● Modo Local</span>
+    <span id="userEmailTop" style="font-size:11px;color:#bdc3c7;margin-left:10px"></span>
+    <button type="button" id="btnLogout" class="btn-sm btn-danger" style="display:none;margin-left:8px" onclick="sairFHMotores()">Sair</button>
 </div>
 
 <div class="app-body">
@@ -874,11 +890,21 @@
                 </form>
             </div>
             <div class="card">
-                <h2>💾 Backup dos Dados</h2>
+                <h2>☁ Sincronização + Segurança (Firebase)</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    O FH MOTORES salva <strong>somente neste computador</strong> (não usa o banco do FH CONTROL).
-                    <strong>Exporte um backup</strong> com frequência. Se um dia abrir zerado, use <strong>Importar Backup</strong>.
+                    Dados na pasta <code>fhmotores</code> (separada do balcão). Login obrigatório.
+                    Chaves ficam em <code>.env</code> / Secrets do GitHub — não no código público.
+                    Publique as regras de <code>database.rules.json</code> no Firebase Console.
                 </p>
+                <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+                    <button type="button" class="btn-success" onclick="enviarTudoParaFirebase()">☁ Enviar este PC → nuvem</button>
+                    <button type="button" class="btn-info" onclick="baixarTudoDoFirebase()">⬇ Baixar nuvem → este PC</button>
+                </div>
+                <p style="font-size:11px;color:var(--muted);margin-top:8px">No topo deve aparecer <strong>● Online sincronizado</strong>. Os dois computadores precisam de internet e desta versão do sistema.</p>
+            </div>
+            <div class="card">
+                <h2>💾 Backup extra (arquivo)</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">Cópia de segurança no computador (opcional).</p>
                 <div class="toolbar" style="flex-wrap:wrap;gap:8px">
                     <button type="button" class="btn-success" onclick="exportarBackupFH()">⬇️ Exportar Backup (.json)</button>
                     <label class="btn-gold" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;padding:8px 14px">
@@ -887,10 +913,6 @@
                     </label>
                 </div>
                 <p id="infoPersistencia" style="font-size:11px;color:var(--muted);margin-top:10px"></p>
-            </div>
-            <div class="card">
-                <h2>Firebase</h2>
-                <p style="font-size:12px;color:var(--muted)">Desconectado do banco do FH CONTROL de propósito — os sistemas <strong>não compartilham</strong> dados. Quando quiser um Firebase só do FH MOTORES, configure em <strong>FIREBASE/firebase-chave.js</strong>.</p>
             </div>
         </section>
     </main>
@@ -1010,6 +1032,95 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+</script>
+
+<script src="firebase-env.js" onerror="console.warn('firebase-env.js ausente — rode npm run build')"></script>
+<script src="firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getDatabase, ref, push, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+const cfg = Object.assign({}, window.FH_FIREBASE_CONFIG || window.firebaseConfig || {});
+window.firebaseConfig = cfg;
+
+function showLogin(show) {
+    const el = document.getElementById('telaLogin');
+    if (!el) return;
+    el.style.display = show ? 'flex' : 'none';
+    document.body.style.overflow = show ? 'hidden' : '';
+}
+
+if (!cfg.apiKey) {
+    console.warn('Firebase sem chave — rode npm run build com .env ou configure Secrets no GitHub.');
+    window.__fbReady = false;
+    window.__fbAuthRequired = false;
+    showLogin(false);
+    window.dispatchEvent(new Event('firebase-ready'));
+} else {
+    try {
+        if (!cfg.databaseURL && cfg.projectId) {
+            cfg.databaseURL = 'https://' + cfg.projectId + '-default-rtdb.firebaseio.com';
+        }
+        const app = initializeApp(cfg);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        window.__fb = { app, auth, db, ref, push, set, update, remove, onValue, get, ROOT: 'fhmotores' };
+        window.__fbAuthRequired = true;
+        window.__fbReady = false; // só libera depois do login
+
+        window.sairFHMotores = async function() {
+            try { await signOut(auth); } catch (e) { console.warn(e); }
+        };
+
+        const btn = document.getElementById('btnLoginEntrar');
+        if (btn) btn.onclick = async function() {
+            const email = (document.getElementById('loginEmail')?.value || '').trim();
+            const senha = document.getElementById('loginSenha')?.value || '';
+            const err = document.getElementById('loginErro');
+            if (err) err.style.display = 'none';
+            try {
+                await signInWithEmailAndPassword(auth, email, senha);
+            } catch (e) {
+                if (err) {
+                    err.style.display = 'block';
+                    err.textContent = e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password'
+                        ? 'E-mail ou senha inválidos.'
+                        : (e.message || 'Falha no login');
+                }
+            }
+        };
+        document.getElementById('loginSenha')?.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') btn?.click();
+        });
+
+        onAuthStateChanged(auth, function(user) {
+            const btnOut = document.getElementById('btnLogout');
+            const mailEl = document.getElementById('userEmailTop');
+            if (user) {
+                showLogin(false);
+                if (btnOut) btnOut.style.display = '';
+                if (mailEl) mailEl.textContent = user.email || '';
+                window.__fbUser = user;
+                window.__fbReady = true;
+                window.dispatchEvent(new Event('firebase-ready'));
+                window.dispatchEvent(new Event('firebase-auth-ok'));
+            } else {
+                showLogin(true);
+                if (btnOut) btnOut.style.display = 'none';
+                if (mailEl) mailEl.textContent = '';
+                window.__fbUser = null;
+                window.__fbReady = false;
+            }
+        });
+        console.log('FH MOTORES Firebase Auth + DB → /fhmotores');
+    } catch (e) {
+        console.error('Erro Firebase', e);
+        window.__fbReady = false;
+        window.__fbError = e;
+        window.dispatchEvent(new Event('firebase-ready'));
+    }
+}
 </script>
 
 <script>
@@ -1149,12 +1260,18 @@ function atualizarStatusPersistencia(ok, extra) {
     const c = contarRegistros(store);
     const hora = (store && store._meta && store._meta.salvoEm) ? store._meta.salvoEm : '';
     if (ok === false) {
-        el.textContent = '⚠ Erro ao salvar — use Backup em Configurações';
+        el.textContent = '⚠ Erro ao sincronizar — verifique a internet';
         el.style.color = '#e74c3c';
         return;
     }
-    el.textContent = '● Modo Local (' + c.clientes + ' cli · ' + c.documentos + ' docs)' + (hora ? ' · ' + hora : '');
-    el.style.color = '#f1c40f';
+    const online = extra === 'nuvem' || (window.__fb && extra !== 'local');
+    if (online) {
+        el.textContent = '● Online sincronizado (' + c.clientes + ' cli · ' + c.produtos + ' prod · ' + c.documentos + ' docs)' + (hora ? ' · ' + hora : '');
+        el.style.color = '#2ecc71';
+    } else {
+        el.textContent = '● Modo Local (' + c.clientes + ' cli · ' + c.documentos + ' docs)' + (hora ? ' · ' + hora : '');
+        el.style.color = '#f1c40f';
+    }
 }
 
 function loadStore() {
@@ -1259,7 +1376,114 @@ function objToList(obj) {
     return Object.keys(obj).map(k => ({ id: k, ...obj[k] }));
 }
 
+const FB_ROOT = 'fhmotores';
+let _fbAplicandoNuvem = false;
+
+function fbPath(path) {
+    const p = String(path || '').replace(/^\/+|\/+$/g, '');
+    return p ? (FB_ROOT + '/' + p) : FB_ROOT;
+}
+
+function waitFirebase(ms) {
+    ms = ms || 12000;
+    return new Promise(resolve => {
+        if (window.__fbReady === true && window.__fb) return resolve(window.__fb);
+        if (window.__fbReady === false) return resolve(null);
+        const t = setTimeout(() => resolve(window.__fb || null), ms);
+        window.addEventListener('firebase-ready', () => {
+            clearTimeout(t);
+            resolve(window.__fb || null);
+        }, { once: true });
+    });
+}
+
+function sanitizarParaFirebase(val) {
+    return JSON.parse(JSON.stringify(val, function(k, v) {
+        return v === undefined ? null : v;
+    }));
+}
+
+function aplicarStoreDaNuvem(dados) {
+    _fbAplicandoNuvem = true;
+    try {
+        const merged = migrarContasLegadas(Object.assign(storeDefault(), dados || {}));
+        if (!merged._meta) merged._meta = {};
+        merged._meta.origem = 'firebase';
+        merged._meta.salvoEm = new Date().toLocaleString('pt-BR');
+        store = merged;
+        saveStore();
+        refreshFromStore();
+        atualizarStatusPersistencia(true, 'nuvem');
+    } finally {
+        _fbAplicandoNuvem = false;
+    }
+}
+
+async function enviarStoreParaNuvem() {
+    const fb = window.__fb;
+    if (!fb || _fbAplicandoNuvem) return false;
+    const payload = sanitizarParaFirebase(store);
+    if (payload._meta) delete payload._meta;
+    await fb.set(fb.ref(fb.db, FB_ROOT), payload);
+    return true;
+}
+
+window.enviarTudoParaFirebase = async function() {
+    const fb = await waitFirebase(5000);
+    if (!fb) return Swal.fire('Sem conexão', 'Firebase não conectou. Verifique a internet.', 'error');
+    const r = await Swal.fire({
+        title: 'Enviar dados deste PC para a nuvem?',
+        html: 'Grava na pasta <b>fhmotores</b> (separada do FH CONTROL).<br>Use no computador que tem os cadastros que faltam no outro.',
+        icon: 'question', showCancelButton: true,
+        confirmButtonText: '☁ Sincronizar agora', cancelButtonText: 'Cancelar'
+    });
+    if (!r.isConfirmed) return;
+    try {
+        await enviarStoreParaNuvem();
+        atualizarStatusPersistencia(true, 'nuvem');
+        Swal.fire({ icon: 'success', title: 'Sincronizado!', text: 'Agora o outro computador deve ver os dados (F5).', timer: 2800, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
+    }
+};
+
+window.baixarTudoDoFirebase = async function() {
+    const fb = await waitFirebase(5000);
+    if (!fb) return Swal.fire('Sem conexão', 'Firebase não conectou.', 'error');
+    try {
+        const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
+        const cloud = snap.val();
+        if (!cloud || !storeTemDados(cloud)) {
+            return Swal.fire('Nuvem vazia', 'Ainda não há dados do FH MOTORES na nuvem. No outro PC clique em “Enviar para a nuvem”.', 'info');
+        }
+        const conf = await Swal.fire({
+            title: 'Baixar da nuvem?',
+            html: 'Substitui o que está neste navegador pelos dados sincronizados.',
+            icon: 'warning', showCancelButton: true,
+            confirmButtonText: 'Baixar e sincronizar', cancelButtonText: 'Cancelar'
+        });
+        if (!conf.isConfirmed) return;
+        aplicarStoreDaNuvem(cloud);
+        Swal.fire({ icon: 'success', title: 'Dados atualizados!', timer: 2000, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
+    }
+};
+
 async function dbPush(path, data) {
+    const clean = sanitizarParaFirebase(data);
+    const fb = window.__fb;
+    if (fb) {
+        try {
+            const newRef = fb.push(fb.ref(fb.db, fbPath(path)));
+            await fb.set(newRef, clean);
+            setNested(store, String(path).replace(/\/$/, '') + '/' + newRef.key, clean);
+            saveStore();
+            refreshFromStore();
+            atualizarStatusPersistencia(true, 'nuvem');
+            return { key: newRef.key };
+        } catch (e) { console.warn('Firebase push falhou, salvando local', e); }
+    }
     let parent = store;
     const parts = String(path).split('/').filter(Boolean);
     for (const p of parts) {
@@ -1267,32 +1491,79 @@ async function dbPush(path, data) {
         parent = parent[p];
     }
     const id = genId();
-    parent[id] = data;
+    parent[id] = clean;
     saveStore();
     refreshFromStore();
+    atualizarStatusPersistencia(true, 'local');
     return { key: id };
 }
 
 async function dbSet(path, data) {
-    setNested(store, path, data);
+    const clean = sanitizarParaFirebase(data);
+    const fb = window.__fb;
+    if (fb) {
+        try {
+            await fb.set(fb.ref(fb.db, fbPath(path)), clean);
+            setNested(store, path, clean);
+            saveStore();
+            refreshFromStore();
+            atualizarStatusPersistencia(true, 'nuvem');
+            return;
+        } catch (e) { console.warn('Firebase set falhou, salvando local', e); }
+    }
+    setNested(store, path, clean);
     saveStore();
     refreshFromStore();
+    atualizarStatusPersistencia(true, 'local');
 }
 
 async function dbUpdate(path, partial) {
+    const clean = sanitizarParaFirebase(partial);
+    const fb = window.__fb;
+    if (fb) {
+        try {
+            await fb.update(fb.ref(fb.db, fbPath(path)), clean);
+            const cur = getNested(store, path) || {};
+            setNested(store, path, Object.assign({}, cur, clean));
+            saveStore();
+            refreshFromStore();
+            atualizarStatusPersistencia(true, 'nuvem');
+            return;
+        } catch (e) { console.warn('Firebase update falhou, salvando local', e); }
+    }
     const cur = getNested(store, path) || {};
-    setNested(store, path, Object.assign({}, cur, partial));
+    setNested(store, path, Object.assign({}, cur, clean));
     saveStore();
     refreshFromStore();
+    atualizarStatusPersistencia(true, 'local');
 }
 
 async function dbRemove(path) {
+    const fb = window.__fb;
+    if (fb) {
+        try {
+            await fb.remove(fb.ref(fb.db, fbPath(path)));
+            deleteNested(store, path);
+            saveStore();
+            refreshFromStore();
+            atualizarStatusPersistencia(true, 'nuvem');
+            return;
+        } catch (e) { console.warn('Firebase remove falhou, salvando local', e); }
+    }
     deleteNested(store, path);
     saveStore();
     refreshFromStore();
+    atualizarStatusPersistencia(true, 'local');
 }
 
 async function dbGet(path) {
+    const fb = window.__fb;
+    if (fb) {
+        try {
+            const snap = await fb.get(fb.ref(fb.db, fbPath(path)));
+            return { val: () => snap.val() };
+        } catch (e) { console.warn(e); }
+    }
     return { val: () => getNested(store, path) };
 }
 
@@ -1334,7 +1605,10 @@ window.importarBackupFH = function(file) {
             store = parsed;
             saveStore();
             refreshFromStore();
-            Swal.fire({ icon:'success', title:'Backup restaurado!', timer: 2000, showConfirmButton:false });
+            if (window.__fb) {
+                try { await enviarStoreParaNuvem(); } catch (err) { console.warn(err); }
+            }
+            Swal.fire({ icon:'success', title:'Backup restaurado!', text: window.__fb ? 'Também enviado à nuvem.' : '', timer: 2200, showConfirmButton:false });
         } catch (e) {
             Swal.fire('Erro', e.message, 'error');
         }
@@ -2702,6 +2976,8 @@ function renderOrcamentos() {
                 <button type="button" class="btn-acao receber" style="background:#27ae60;color:#fff;border-color:#27ae60" onclick="abrirConverter('${d.id}')" title="Converter em venda">✅ Converter Venda</button>
                 <button type="button" class="btn-acao pdf" onclick="gerarPDFVenda('${d.id}')" title="Gerar PDF A4">📄 PDF</button>
                 <button type="button" class="btn-acao" onclick="gerarPDFCliente('${d.id}')" title="PDF para enviar ao cliente">📤 PDF Cliente</button>
+                <button type="button" class="btn-acao" style="background:#9b59b6;color:#fff;border-color:#9b59b6" onclick="gerarLinkAssinar('${d.id}')" title="Link assinar online">✍️ Assinar</button>
+                <button type="button" class="btn-acao" onclick="aplicarAssinaturaPendente('${d.id}')" title="Buscar assinatura">⬇ Assinatura</button>
                 <button type="button" class="btn-acao" onclick="imprimirOrcamentoAtual('${d.id}')" title="Imprimir">🖨️</button>
                 <button type="button" class="btn-acao" onclick="visualizarNota('${d.id}')" title="Visualizar">👁️</button>
                 <button type="button" class="btn-acao del" onclick="excluirDoc('${d.id}')" title="Excluir">🗑️</button>
@@ -2748,6 +3024,8 @@ function montarAcoesVendaHtml(d) {
     let h = '';
     h += `<button type="button" class="btn-acao edit" onclick="editarVenda('${id}')" title="Editar">✏️ Ed</button>`;
     h += `<button type="button" class="btn-acao whats" onclick="enviarWhatsVenda('${id}')" title="WhatsApp">📱 Whats</button>`;
+    h += `<button type="button" class="btn-acao" style="background:#9b59b6;color:#fff;border-color:#9b59b6" onclick="gerarLinkAssinar('${id}')" title="Link assinar online">✍️ Assinar</button>`;
+    h += `<button type="button" class="btn-acao" onclick="aplicarAssinaturaPendente('${id}')" title="Buscar assinatura">⬇ Assinatura</button>`;
     h += `<button type="button" class="btn-acao" onclick="copiarLinkVenda('${id}')" title="Copiar link">🔗 Link</button>`;
     h += `<a href="${window._urlSebraeNfe}" target="_blank" rel="noopener" class="btn-acao nota" title="Emissor NFe Sebrae">🏢 Sebrae</a>`;
     h += `<a href="${window._urlNfeGov}" target="_blank" rel="noopener" class="btn-acao nota" title="NFSe Nacional">📄 NFE</a>`;
@@ -2774,6 +3052,67 @@ window.copiarLinkVenda = function(id) {
         navigator.clipboard.writeText(link).then(ok).catch(() => Swal.fire('Link', link, 'info'));
     } else {
         Swal.fire('Link', link, 'info');
+    }
+};
+
+window.gerarLinkAssinar = async function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d) return Swal.fire('Erro', 'Documento não encontrado', 'error');
+    const fb = window.__fb;
+    if (!fb) return Swal.fire('Offline', 'Conecte no Firebase (login) para gerar o link.', 'warning');
+    const token = 'fh_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    const pack = {
+        token,
+        docId: d.id,
+        tipo: d.tipo || 'ORCAMENTO',
+        numero: d.numero,
+        numeroFmt: d.numeroFmt,
+        clienteNome: d.clienteNome,
+        data: d.data,
+        motor: d.motor || '',
+        total: d.total,
+        itens: (d.itens || []).map(i => ({ nome: i.nome, valor: i.valor, total: i.total != null ? i.total : i.valor })),
+        status: 'PENDENTE',
+        criadoEm: agora(),
+        timestamp: Date.now()
+    };
+    try {
+        await fb.set(fb.ref(fb.db, 'fh_assinaturas/' + token), pack);
+        await dbUpdate('documentos/' + id, { tokenAssinatura: token, statusAssinatura: 'PENDENTE' });
+        const base = location.href.replace(/index\.html.*/i, '').replace(/\/?$/, '/');
+        const link = base + 'assinar-fh.html?t=' + encodeURIComponent(token);
+        await navigator.clipboard.writeText(link).catch(() => {});
+        const tel = (d.clienteTel || d.telefone || '').replace(/\D/g, '');
+        const msg = encodeURIComponent('Olá! Segue o link para assinar o orçamento/serviço da FH MOTORES:\\n' + link);
+        const wa = tel ? ('https://wa.me/55' + tel + '?text=' + msg) : '';
+        Swal.fire({
+            icon: 'success',
+            title: 'Link de assinatura',
+            html: '<p style="font-size:12px;word-break:break-all">' + link + '</p>' +
+                (wa ? '<a class="btn-success" style="display:inline-block;margin-top:10px;padding:8px 12px;text-decoration:none;color:#fff;border-radius:6px" href="' + wa + '" target="_blank">📱 Enviar no WhatsApp</a>' : '<p style="font-size:11px;color:#bdc3c7">Link copiado — cole no WhatsApp.</p>')
+        });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
+    }
+};
+
+window.aplicarAssinaturaPendente = async function(id) {
+    const d = documentos.find(x => x.id === id);
+    if (!d || !d.tokenAssinatura) return Swal.fire('Info', 'Este documento ainda não tem link de assinatura.', 'info');
+    const fb = window.__fb;
+    if (!fb) return;
+    try {
+        const snap = await fb.get(fb.ref(fb.db, 'fh_assinaturas/' + d.tokenAssinatura));
+        const pack = snap.val();
+        if (!pack || !pack.assinaturaCliente) return Swal.fire('Aguardando', 'Cliente ainda não assinou.', 'info');
+        await dbUpdate('documentos/' + id, {
+            assinaturaCliente: pack.assinaturaCliente,
+            statusAssinatura: 'ASSINADO',
+            assinadoEm: pack.assinadoEm || agora()
+        });
+        Swal.fire({ icon: 'success', title: 'Assinatura importada!', timer: 1800, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message, 'error');
     }
 };
 
@@ -3792,7 +4131,47 @@ gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; })
             showConfirmButton: false
         });
     }
-    atualizarStatusPersistencia(true, 'local');
+
+    const fb = await waitFirebase(12000);
+    if (fb) {
+        try {
+            const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
+            const cloud = snap.val();
+            const cloudTem = cloud && storeTemDados(cloud);
+            const localTem = storeTemDados(store);
+            const cloudCount = cloudTem ? contarRegistros(cloud).total : 0;
+            const localCount = localTem ? contarRegistros(store).total : 0;
+
+            if (cloudTem && (!localTem || cloudCount >= localCount)) {
+                aplicarStoreDaNuvem(cloud);
+            } else if (localTem && !cloudTem) {
+                await enviarStoreParaNuvem();
+                atualizarStatusPersistencia(true, 'nuvem');
+            } else if (cloudTem && localTem && localCount > cloudCount) {
+                // Este PC tem mais dados — sobe para a nuvem (caso do outro PC que cadastrou)
+                await enviarStoreParaNuvem();
+                atualizarStatusPersistencia(true, 'nuvem');
+            } else {
+                atualizarStatusPersistencia(true, 'nuvem');
+            }
+
+            fb.onValue(fb.ref(fb.db, FB_ROOT), function(s) {
+                const v = s.val();
+                if (!v || _fbAplicandoNuvem) return;
+                aplicarStoreDaNuvem(v);
+            });
+        } catch (e) {
+            console.error('Sync Firebase falhou', e);
+            atualizarStatusPersistencia(false);
+            if (window.Swal) Swal.fire({
+                icon: 'warning',
+                title: 'Sem sincronização',
+                html: 'Não conectou na nuvem. Continuando local.<br><small>' + (e.message || e) + '</small>'
+            });
+        }
+    } else {
+        atualizarStatusPersistencia(true, 'local');
+    }
 
     // Seed tabela de rebobinamento só se ainda estiver vazia
     if (!servicos.length) {

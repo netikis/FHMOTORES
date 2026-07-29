@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Assinar — FH MOTORES</title>
+    <style>
+        :root {
+            --navy: #1a2a43;
+            --gold: #d4a017;
+            --bg: #0e1520;
+            --card: #162233;
+            --text: #e8eef5;
+            --muted: #8fa3b8;
+            --ok: #2f9e6b;
+            --line: rgba(212, 160, 23, 0.25);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(180deg, #0b121b, #1a2a43);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .wrap { max-width: 640px; margin: 0 auto; }
+        h1 { font-size: 1.2rem; margin-bottom: 6px; color: var(--gold); }
+        .hint { color: var(--muted); font-size: 0.88rem; margin-bottom: 14px; line-height: 1.4; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .card h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .campo.full { grid-column: 1 / -1; }
+        .lbl { display: block; font-size: 0.68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+        .val { display: block; margin-top: 3px; font-size: 0.95rem; white-space: pre-wrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        th, td { padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
+        th { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
+        .total { text-align: right; font-size: 1.2rem; font-weight: 700; color: var(--gold); margin-top: 8px; }
+        canvas {
+            width: 100%;
+            height: 180px;
+            background: #fff;
+            border-radius: 8px;
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .btn-ok { background: var(--ok); color: #fff; flex: 1; }
+        .btn-clear { background: #3a4a5c; color: #fff; }
+        .erro { color: #e74c3c; margin-top: 10px; }
+        .okbox { background: rgba(47,158,107,.15); border: 1px solid var(--ok); border-radius: 10px; padding: 14px; }
+        img.assinada { max-width: 100%; background: #fff; border-radius: 8px; }
+        .loading { color: var(--muted); padding: 24px; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>FH MOTORES — Assinatura</h1>
+    <p class="hint" id="hintTopo">Confira o serviço e assine no quadro abaixo.</p>
+    <div id="app" class="loading">Carregando…</div>
+</div>
+
+<script src="firebase-env.js"></script>
+<script src="firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+const cfg = window.FH_FIREBASE_CONFIG || {};
+const appEl = document.getElementById('app');
+const params = new URLSearchParams(location.search);
+const token = (params.get('t') || params.get('token') || '').trim();
+
+function fmt(v) {
+    return 'R$ ' + (parseFloat(v) || 0).toFixed(2).replace('.', ',');
+}
+function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function erro(msg) {
+    appEl.innerHTML = '<p class="erro">' + esc(msg) + '</p>';
+}
+
+if (!token) {
+    erro('Link inválido: falta o código de assinatura.');
+} else if (!cfg.apiKey || !cfg.projectId) {
+    erro('Firebase não configurado neste site. Peça à oficina para publicar o deploy com as chaves.');
+} else {
+    const app = initializeApp(cfg);
+    const db = getDatabase(app);
+    const path = 'fh_assinaturas/' + token;
+
+    get(ref(db, path)).then(snap => {
+        const pack = snap.val();
+        if (!pack) {
+            erro('Link inválido ou expirado. Peça à oficina um novo link.');
+            return;
+        }
+        if (pack.assinaturaCliente) {
+            document.getElementById('hintTopo').textContent = 'Este documento já foi assinado.';
+            appEl.innerHTML = '<div class="okbox"><strong>Assinatura já registrada.</strong><br><br>' +
+                '<img class="assinada" src="' + pack.assinaturaCliente + '" alt="Assinatura"></div>';
+            return;
+        }
+        renderForm(pack);
+    }).catch(e => erro('Erro ao carregar: ' + (e.message || e)));
+
+    function renderForm(pack) {
+        const itens = Array.isArray(pack.itens) ? pack.itens : [];
+        const rows = itens.map(i => '<tr><td>' + esc(i.nome) + '</td><td>' + fmt(i.total != null ? i.total : i.valor) + '</td></tr>').join('');
+        appEl.innerHTML = `
+            <div class="card">
+                <h2>Dados</h2>
+                <div class="grid">
+                    <div class="campo"><span class="lbl">Cliente</span><span class="val">${esc(pack.clienteNome)}</span></div>
+                    <div class="campo"><span class="lbl">Documento</span><span class="val">#${esc(pack.numeroFmt || pack.numero || '')}</span></div>
+                    <div class="campo"><span class="lbl">Data</span><span class="val">${esc(pack.data || '')}</span></div>
+                    <div class="campo"><span class="lbl">Tipo</span><span class="val">${esc(pack.tipo || 'ORCAMENTO')}</span></div>
+                    <div class="campo full"><span class="lbl">Motor / Serviço</span><span class="val">${esc(pack.motor || '-')}</span></div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Itens</h2>
+                <table><thead><tr><th>Descrição</th><th>Valor</th></tr></thead><tbody>${rows || '<tr><td colspan="2">—</td></tr>'}</tbody></table>
+                <div class="total">Total ${fmt(pack.total)}</div>
+            </div>
+            <div class="card">
+                <h2>Assinatura do cliente</h2>
+                <canvas id="pad" width="600" height="180"></canvas>
+                <div class="btns">
+                    <button type="button" class="btn-clear" id="btnLimpar">Limpar</button>
+                    <button type="button" class="btn-ok" id="btnConfirmar">✓ Confirmar assinatura</button>
+                </div>
+                <p class="erro" id="msgErro" style="display:none"></p>
+            </div>`;
+
+        const canvas = document.getElementById('pad');
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        let desenhando = false, temTraço = false;
+
+        function pos(e) {
+            const r = canvas.getBoundingClientRect();
+            const t = e.touches ? e.touches[0] : e;
+            return { x: (t.clientX - r.left) * (canvas.width / r.width), y: (t.clientY - r.top) * (canvas.height / r.height) };
+        }
+        function start(e) { e.preventDefault(); desenhando = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+        function move(e) {
+            if (!desenhando) return;
+            e.preventDefault();
+            const p = pos(e);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            temTraço = true;
+        }
+        function end() { desenhando = false; }
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mouseup', end);
+        canvas.addEventListener('mouseleave', end);
+        canvas.addEventListener('touchstart', start, { passive: false });
+        canvas.addEventListener('touchmove', move, { passive: false });
+        canvas.addEventListener('touchend', end);
+
+        document.getElementById('btnLimpar').onclick = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            temTraço = false;
+        };
+        document.getElementById('btnConfirmar').onclick = async () => {
+            const msg = document.getElementById('msgErro');
+            if (!temTraço) {
+                msg.style.display = 'block';
+                msg.textContent = 'Faça a assinatura antes de confirmar.';
+                return;
+            }
+            const dataUrl = canvas.toDataURL('image/png');
+            try {
+                await update(ref(db, path), {
+                    assinaturaCliente: dataUrl,
+                    status: 'ASSINADO',
+                    assinadoEm: new Date().toLocaleString('pt-BR'),
+                    timestampAssinatura: Date.now()
+                });
+                if (pack.docId) {
+                    try {
+                        await update(ref(db, 'fhmotores/documentos/' + pack.docId), {
+                            assinaturaCliente: dataUrl,
+                            statusAssinatura: 'ASSINADO',
+                            assinadoEm: new Date().toLocaleString('pt-BR')
+                        });
+                    } catch (_) { /* pode falhar se regra exigir auth — assinaturas/ já salva */ }
+                }
+                document.getElementById('hintTopo').textContent = 'Obrigado! Assinatura concluída.';
+                appEl.innerHTML = '<div class="okbox"><strong>Assinatura registrada.</strong><br>A oficina já pode ver no sistema.</div>';
+            } catch (e) {
+                msg.style.display = 'block';
+                msg.textContent = 'Erro ao salvar: ' + (e.message || e);
+            }
+        };
+    }
+}
+</script>
+</body>
+</html>

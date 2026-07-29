@@ -1,0 +1,10 @@
+{
+  "name": "fh-motores",
+  "private": true,
+  "version": "1.0.0",
+  "description": "FH MOTORES — gestão de oficina (GitHub Pages + Firebase)",
+  "scripts": {
+    "build": "node scripts/build-firebase-env.js",
+    "pages-build": "node scripts/build-firebase-env.js"
+  }
+}
