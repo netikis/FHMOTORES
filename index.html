@@ -3422,14 +3422,18 @@ async function baixarPdfA4(nome) {
     if (modo === 'cliente') {
         return `${scriptBaixar}<div class="pdf-toolbar pdf-toolbar-cliente no-export-pdf">
             <span class="pdf-toolbar-msg">Envio ao cliente: baixe o PDF ou imprima (Ctrl+P).</span>
-            <button type="button" class="btn-pdf-baixar" id="btnBaixarPdf" onclick="baixarPdfA4('${nomeJs}')">📄 Baixar PDF</button>
-            <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+            <div class="pdf-toolbar-actions">
+                <button type="button" class="btn-pdf-baixar" id="btnBaixarPdf" onclick="baixarPdfA4('${nomeJs}')">📄 Baixar PDF</button>
+                <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+            </div>
         </div>`;
     }
     return `${scriptBaixar}<div class="pdf-toolbar pdf-toolbar-loja no-export-pdf">
         <span class="pdf-toolbar-msg">Uso na loja: baixe o PDF ou imprima o papel A4.</span>
-        <button type="button" class="btn-pdf-baixar" id="btnBaixarPdf" onclick="baixarPdfA4('${nomeJs}')">📄 Baixar PDF</button>
-        <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <div class="pdf-toolbar-actions">
+            <button type="button" class="btn-pdf-baixar" id="btnBaixarPdf" onclick="baixarPdfA4('${nomeJs}')">📄 Baixar PDF</button>
+            <button type="button" class="btn-pdf-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        </div>
     </div>`;
 };
 
@@ -3528,14 +3532,26 @@ body {
 }
 .pdf-toolbar {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px;
-  z-index: 1000; background: rgba(44,62,80,.96); padding: 12px 18px; border-radius: 8px;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 92%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  z-index: 1000; background: rgba(44,62,80,.96); padding: 14px 20px; border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); max-width: 92%; min-width: 280px;
 }
-.pdf-toolbar-msg { color: #ecf0f1; font-size: 11px; max-width: 320px; line-height: 1.35; }
-.btn-pdf-imprimir { background: #2980b9; color: #fff; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+.pdf-toolbar-msg {
+  color: #ecf0f1; font-size: 11px; line-height: 1.35; text-align: center;
+  max-width: 360px; display: block;
+}
+.pdf-toolbar-actions {
+  display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center;
+  justify-content: center; gap: 10px; width: 100%;
+}
+.btn-pdf-imprimir, .btn-pdf-baixar {
+  color: #fff; border: none; padding: 10px 18px; font-size: 13px; font-weight: bold;
+  border-radius: 6px; cursor: pointer; min-width: 140px; height: 42px;
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+}
+.btn-pdf-imprimir { background: #2980b9; }
 .btn-pdf-imprimir:hover { background: #3498db; }
-.btn-pdf-baixar { background: #27ae60; color: #fff; border: none; padding: 10px 16px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+.btn-pdf-baixar { background: #27ae60; }
 .btn-pdf-baixar:hover { background: #2ecc71; }
 .btn-pdf-baixar:disabled { opacity: .7; cursor: wait; }
 @media print {
