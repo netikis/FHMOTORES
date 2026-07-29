@@ -900,7 +900,10 @@
                     <button type="button" class="btn-success" onclick="enviarTudoParaFirebase()">☁ Enviar este PC → nuvem</button>
                     <button type="button" class="btn-info" onclick="baixarTudoDoFirebase()">⬇ Baixar nuvem → este PC</button>
                 </div>
-                <p style="font-size:11px;color:var(--muted);margin-top:8px">No topo deve aparecer <strong>● Online sincronizado</strong>. Os dois computadores precisam de internet e desta versão do sistema.</p>
+                <p style="font-size:11px;color:var(--muted);margin-top:8px">
+                    Com login nos dois PCs, a sincronização é <strong>automática</strong> (não precisa clicar).
+                    Os botões acima são só emergência. No topo: <strong>● Online sincronizado</strong>.
+                </p>
             </div>
             <div class="card">
                 <h2>💾 Backup extra (arquivo)</h2>
@@ -1385,17 +1388,71 @@ function fbPath(path) {
 }
 
 function waitFirebase(ms) {
-    ms = ms || 12000;
+    ms = ms || 120000; // espera login (não desiste em 12s)
     return new Promise(resolve => {
         if (window.__fbReady === true && window.__fb) return resolve(window.__fb);
-        if (window.__fbReady === false) return resolve(null);
-        const t = setTimeout(() => resolve(window.__fb || null), ms);
-        window.addEventListener('firebase-ready', () => {
-            clearTimeout(t);
-            resolve(window.__fb || null);
-        }, { once: true });
+        // Sem apiKey / Firebase não iniciou de verdade
+        if (window.__fbAuthRequired === false && window.__fbReady === false && !window.__fb) {
+            return resolve(null);
+        }
+        const t = setTimeout(() => resolve(window.__fbReady && window.__fb ? window.__fb : null), ms);
+        const ok = () => {
+            if (window.__fbReady && window.__fb) {
+                clearTimeout(t);
+                resolve(window.__fb);
+            }
+        };
+        window.addEventListener('firebase-ready', ok);
+        window.addEventListener('firebase-auth-ok', ok);
     });
 }
+
+let _fbSyncAtivo = false;
+
+async function iniciarSyncAutomatico() {
+    const fb = window.__fb;
+    if (!fb || !window.__fbReady || _fbSyncAtivo) return;
+    _fbSyncAtivo = true;
+    try {
+        const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
+        const cloud = snap.val();
+        const cloudTem = cloud && storeTemDados(cloud);
+        const localTem = storeTemDados(store);
+
+        // Nuvem manda: o que o outro PC salvou aparece aqui sozinho
+        if (cloudTem) {
+            aplicarStoreDaNuvem(cloud);
+        } else if (localTem) {
+            // Primeira vez: sobe o que tem neste PC
+            await enviarStoreParaNuvem();
+            atualizarStatusPersistencia(true, 'nuvem');
+        } else {
+            atualizarStatusPersistencia(true, 'nuvem');
+        }
+
+        // Escuta ao vivo — qualquer alteração no outro PC atualiza esta tela
+        fb.onValue(fb.ref(fb.db, FB_ROOT), function(s) {
+            const v = s.val();
+            if (!v || _fbAplicandoNuvem) return;
+            aplicarStoreDaNuvem(v);
+        });
+        atualizarStatusPersistencia(true, 'nuvem');
+        console.log('Sincronização automática ativa (/fhmotores)');
+    } catch (e) {
+        _fbSyncAtivo = false;
+        console.error('Sync Firebase falhou', e);
+        atualizarStatusPersistencia(false);
+        if (window.Swal) Swal.fire({
+            icon: 'warning',
+            title: 'Sem sincronização',
+            html: 'Não conectou na nuvem. Faça login e confira o Realtime Database.<br><small>' + (e.message || e) + '</small>'
+        });
+    }
+}
+
+window.addEventListener('firebase-auth-ok', function() {
+    iniciarSyncAutomatico();
+});
 
 function sanitizarParaFirebase(val) {
     return JSON.parse(JSON.stringify(val, function(k, v) {
@@ -4132,45 +4189,16 @@ gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; })
         });
     }
 
-    const fb = await waitFirebase(12000);
-    if (fb) {
-        try {
-            const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
-            const cloud = snap.val();
-            const cloudTem = cloud && storeTemDados(cloud);
-            const localTem = storeTemDados(store);
-            const cloudCount = cloudTem ? contarRegistros(cloud).total : 0;
-            const localCount = localTem ? contarRegistros(store).total : 0;
-
-            if (cloudTem && (!localTem || cloudCount >= localCount)) {
-                aplicarStoreDaNuvem(cloud);
-            } else if (localTem && !cloudTem) {
-                await enviarStoreParaNuvem();
-                atualizarStatusPersistencia(true, 'nuvem');
-            } else if (cloudTem && localTem && localCount > cloudCount) {
-                // Este PC tem mais dados — sobe para a nuvem (caso do outro PC que cadastrou)
-                await enviarStoreParaNuvem();
-                atualizarStatusPersistencia(true, 'nuvem');
-            } else {
-                atualizarStatusPersistencia(true, 'nuvem');
-            }
-
-            fb.onValue(fb.ref(fb.db, FB_ROOT), function(s) {
-                const v = s.val();
-                if (!v || _fbAplicandoNuvem) return;
-                aplicarStoreDaNuvem(v);
-            });
-        } catch (e) {
-            console.error('Sync Firebase falhou', e);
-            atualizarStatusPersistencia(false);
-            if (window.Swal) Swal.fire({
-                icon: 'warning',
-                title: 'Sem sincronização',
-                html: 'Não conectou na nuvem. Continuando local.<br><small>' + (e.message || e) + '</small>'
-            });
-        }
-    } else {
+    // Sync automático após login (não precisa clicar em sincronizar)
+    if (window.__fbReady && window.__fb) {
+        await iniciarSyncAutomatico();
+    } else if (window.__fbAuthRequired) {
         atualizarStatusPersistencia(true, 'local');
+        // ao logar, o evento firebase-auth-ok inicia a sync sozinha
+    } else {
+        const fb = await waitFirebase(8000);
+        if (fb) await iniciarSyncAutomatico();
+        else atualizarStatusPersistencia(true, 'local');
     }
 
     // Seed tabela de rebobinamento só se ainda estiver vazia
