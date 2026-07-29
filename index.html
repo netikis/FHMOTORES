@@ -217,7 +217,6 @@
         <input id="loginSenha" type="password" autocomplete="current-password" style="width:100%;margin:4px 0 14px;padding:10px;border-radius:8px;border:1px solid #7f8c8d;background:#1a252f;color:#fff">
         <button type="button" id="btnLoginEntrar" class="btn-primary" style="width:100%;padding:12px">Entrar</button>
         <p id="loginErro" style="display:none;color:#e74c3c;font-size:12px;margin-top:10px"></p>
-        <p style="font-size:11px;color:#7f8c8d;margin-top:12px">Crie o usuário em Firebase → Authentication → E-mail/senha.</p>
     </div>
 </div>
 
@@ -891,19 +890,10 @@
             </div>
             <div class="card">
                 <h2>☁ Sincronização + Segurança (Firebase)</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    Dados na pasta <code>fhmotores</code> (separada do balcão). Login obrigatório.
-                    Chaves ficam em <code>.env</code> / Secrets do GitHub — não no código público.
-                    Publique as regras de <code>database.rules.json</code> no Firebase Console.
-                </p>
                 <div class="toolbar" style="flex-wrap:wrap;gap:8px">
                     <button type="button" class="btn-success" onclick="enviarTudoParaFirebase()">☁ Enviar este PC → nuvem</button>
                     <button type="button" class="btn-info" onclick="baixarTudoDoFirebase()">⬇ Baixar nuvem → este PC</button>
                 </div>
-                <p style="font-size:11px;color:var(--muted);margin-top:8px">
-                    Com login nos dois PCs, a sincronização é <strong>automática</strong> (não precisa clicar).
-                    Os botões acima são só emergência. No topo: <strong>● Online sincronizado</strong>.
-                </p>
             </div>
             <div class="card">
                 <h2>💾 Backup extra (arquivo)</h2>
