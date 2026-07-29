@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "fhmotores": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "fh_assinaturas": {
+      "$token": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}
