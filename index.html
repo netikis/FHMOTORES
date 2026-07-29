@@ -1485,12 +1485,38 @@ async function enviarStoreParaNuvem() {
     return true;
 }
 
+function msgErroFirebase(e) {
+    const code = (e && (e.code || e.message)) || '';
+    if (String(code).includes('PERMISSION_DENIED')) {
+        return 'Sem permissão no banco. Confirme login e as Rules publicadas (auth != null).';
+    }
+    if (String(code).includes('NETWORK') || String(code).toLowerCase().includes('network')) {
+        return 'Sem internet ou Firebase inacessível.';
+    }
+    return (e && e.message) || String(e) || 'Erro desconhecido';
+}
+
 window.enviarTudoParaFirebase = async function() {
-    const fb = await waitFirebase(5000);
-    if (!fb) return Swal.fire('Sem conexão', 'Firebase não conectou. Verifique a internet.', 'error');
+    const fb = await waitFirebase(8000);
+    if (!fb || !window.__fbReady || !window.__fbUser) {
+        return Swal.fire('Faça login', 'Os dois PCs precisam estar logados com o mesmo usuário Firebase (ex.: fhmotores@gmail.com) antes de enviar/baixar.', 'warning');
+    }
+    const cont = contarRegistros(store);
+    if (cont.total <= 0) {
+        return Swal.fire({
+            icon: 'warning',
+            title: 'Este PC está vazio',
+            html: 'Não há clientes/produtos/documentos neste navegador para enviar.<br><br>' +
+                'Use o computador (e o mesmo navegador) onde você <b>já vê</b> os cadastros na tela.<br>' +
+                'Se abriu só o site do GitHub Pages num PC novo, a memória local começa vazia.'
+        });
+    }
     const r = await Swal.fire({
         title: 'Enviar dados deste PC para a nuvem?',
-        html: 'Grava na pasta <b>fhmotores</b> (separada do FH CONTROL).<br>Use no computador que tem os cadastros que faltam no outro.',
+        html: 'Conta: <b>' + (window.__fbUser.email || '') + '</b><br>' +
+            'Vai gravar: <b>' + cont.total + '</b> registros<br>' +
+            '(' + cont.clientes + ' clientes, ' + cont.produtos + ' produtos, ' + cont.documentos + ' docs, ' + cont.servicos + ' serviços)<br>' +
+            'Pasta: <b>fhmotores</b>',
         icon: 'question', showCancelButton: true,
         confirmButtonText: '☁ Sincronizar agora', cancelButtonText: 'Cancelar'
     });
@@ -1498,32 +1524,47 @@ window.enviarTudoParaFirebase = async function() {
     try {
         await enviarStoreParaNuvem();
         atualizarStatusPersistencia(true, 'nuvem');
-        Swal.fire({ icon: 'success', title: 'Sincronizado!', text: 'Agora o outro computador deve ver os dados (F5).', timer: 2800, showConfirmButton: false });
+        Swal.fire({
+            icon: 'success',
+            title: 'Enviado para a nuvem!',
+            html: cont.total + ' registros gravados.<br>No Firebase → Realtime Database → Data, abra <b>fhmotores</b> e confira se aparecem pastas com conteúdo.<br>Depois no outro PC: login → F5 ou <b>Baixar nuvem</b>.'
+        });
     } catch (e) {
-        Swal.fire('Erro', e.message, 'error');
+        Swal.fire('Erro ao enviar', msgErroFirebase(e), 'error');
     }
 };
 
 window.baixarTudoDoFirebase = async function() {
-    const fb = await waitFirebase(5000);
-    if (!fb) return Swal.fire('Sem conexão', 'Firebase não conectou.', 'error');
+    const fb = await waitFirebase(8000);
+    if (!fb || !window.__fbReady || !window.__fbUser) {
+        return Swal.fire('Faça login', 'Entre com o mesmo usuário Firebase do outro PC antes de baixar.', 'warning');
+    }
     try {
         const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
         const cloud = snap.val();
         if (!cloud || !storeTemDados(cloud)) {
-            return Swal.fire('Nuvem vazia', 'Ainda não há dados do FH MOTORES na nuvem. No outro PC clique em “Enviar para a nuvem”.', 'info');
+            return Swal.fire({
+                icon: 'info',
+                title: 'Nuvem vazia',
+                html: 'Não há dados em <b>/fhmotores</b>.<br><br>' +
+                    '1) No PC que tem os dados: faça <b>login</b><br>' +
+                    '2) Clique em <b>Enviar este PC → nuvem</b><br>' +
+                    '3) Confira no Firebase Console → Realtime Database → Data se aparece a pasta <b>fhmotores</b><br>' +
+                    '4) Depois volte aqui e baixe de novo'
+            });
         }
+        const cont = contarRegistros(cloud);
         const conf = await Swal.fire({
             title: 'Baixar da nuvem?',
-            html: 'Substitui o que está neste navegador pelos dados sincronizados.',
+            html: 'Encontrados <b>' + cont.total + '</b> registros na nuvem.<br>Isso substitui os dados deste navegador.',
             icon: 'warning', showCancelButton: true,
             confirmButtonText: 'Baixar e sincronizar', cancelButtonText: 'Cancelar'
         });
         if (!conf.isConfirmed) return;
         aplicarStoreDaNuvem(cloud);
-        Swal.fire({ icon: 'success', title: 'Dados atualizados!', timer: 2000, showConfirmButton: false });
+        Swal.fire({ icon: 'success', title: 'Dados atualizados!', html: cont.total + ' registros sincronizados.', timer: 2500, showConfirmButton: false });
     } catch (e) {
-        Swal.fire('Erro', e.message, 'error');
+        Swal.fire('Erro ao baixar', msgErroFirebase(e), 'error');
     }
 };
 
