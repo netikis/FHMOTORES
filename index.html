@@ -68,6 +68,12 @@
         .menu-submenu { padding-left: 4px; margin-bottom: 2px; }
         .menu-btn.menu-sub {
             padding: 9px 10px 9px 32px; font-size: 11px; margin-bottom: 2px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .menu-badge-qtd {
+            margin-left: auto; background: #f39c12; color: #1a2a43; font-size: 10px; font-weight: 800;
+            min-width: 18px; height: 18px; border-radius: 9px; display: inline-flex; align-items: center;
+            justify-content: center; padding: 0 5px;
         }
         .menu-btn.active-parent {
             background: rgba(0, 86, 179, .35); color: var(--gold); border-color: rgba(212, 160, 23, .35);
@@ -248,6 +254,14 @@
                 <button class="menu-btn menu-sub" data-sec="secOrcamentosAberto"><span>📋</span> <span class="txt">Orçamentos em Aberto</span></button>
                 <button class="menu-btn menu-sub" data-sec="secLancarVenda"><span>🛒</span> <span class="txt">Lançar Venda</span></button>
                 <button class="menu-btn menu-sub" data-sec="secVendas"><span>✅</span> <span class="txt">Vendas Concluídas</span></button>
+            </div>
+        </div>
+        <div class="menu-grupo-vendas" id="menuGrupoReceber">
+            <button type="button" class="menu-btn menu-grupo-toggle" id="btnMenuReceber" aria-expanded="true">
+                <span>⏳</span> <span class="txt">Contas a Receber</span> <span class="menu-seta">▼</span>
+            </button>
+            <div class="menu-submenu" id="submenuReceber">
+                <button class="menu-btn menu-sub" data-sec="secContasReceber"><span>📋</span> <span class="txt">Pendentes</span> <span id="badgeQtdReceber" class="menu-badge-qtd" style="display:none">0</span></button>
             </div>
         </div>
         <div class="menu-grupo-titulo">Caixas / Bancos</div>
@@ -673,9 +687,10 @@
                 <div class="bloco" style="border-color:rgba(231,76,60,.5)">
                     <h3 style="margin:0 0 8px;font-size:13px;color:#e74c3c">3. Item Avulso (sem estoque)</h3>
                     <div class="row">
-                        <div class="col" style="flex:2"><label>Descrição</label><input id="vendaAvulsoNome" placeholder="Descrição avulsa..."></div>
+                        <div class="col" style="flex:2"><label>Descrição</label><input id="vendaAvulsoNome" placeholder="Ex: SERVIÇO TORNO, peça avulsa..."></div>
                         <div class="col"><label>Qtd</label><input id="vendaAvulsoQtd" value="1" inputmode="decimal"></div>
-                        <div class="col"><label>Valor R$</label><input type="number" step="0.01" id="vendaAvulsoValor"></div>
+                        <div class="col"><label>Valor pago (custo)</label><input type="number" step="0.01" id="vendaAvulsoCusto" placeholder="120,00"></div>
+                        <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="vendaAvulsoValor" placeholder="170,00"></div>
                         <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-success" onclick="addAoCarrinhoVenda_Avulso()">+ ADD</button></div>
                     </div>
                 </div>
@@ -723,17 +738,50 @@
         <section id="secVendas" class="section">
             <div class="card">
                 <h2>Vendas Concluídas</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">Orçamentos convertidos e vendas diretas aparecem aqui. Linhas <strong style="color:#f1c40f">amarelas</strong> = Contas a Receber (PENDENTE).</p>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">Somente vendas <strong style="color:#2ecc71">PAGAS</strong>. Pendentes ficam em <strong>Contas a Receber → Pendentes</strong>.</p>
                 <div class="dash-grid" id="dashVendasReceber">
-                    <div class="dash-card"><div class="lbl">Total Vendas</div><div class="valor" id="dashVendasTotal">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Pagas</div><div class="valor" id="dashVendasPagas" style="color:#2ecc71">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Contas a Receber</div><div class="valor" id="dashVendasPendentes" style="color:#f1c40f">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Qtd. Pendentes</div><div class="valor" id="dashVendasQtdPend" style="color:#f1c40f">0</div></div>
+                    <div class="dash-card"><div class="lbl">Total Pago</div><div class="valor" id="dashVendasTotal" style="color:#2ecc71">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl">Qtd. Pagas</div><div class="valor" id="dashVendasPagasQtd" style="color:#2ecc71">0</div></div>
                 </div>
-                <div class="toolbar"><input class="search" id="buscaVenda" placeholder="Buscar venda..." oninput="renderVendas()"></div>
+                <div class="toolbar"><input class="search" id="buscaVenda" placeholder="Buscar venda paga..." oninput="renderVendas()"></div>
                 <div style="overflow-x:auto">
                     <table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Motor / Serviço</th><th>Total</th><th>Pgto</th><th>Caixas</th><th>Ações</th></tr></thead>
                     <tbody id="tbVendas"></tbody></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTAS A RECEBER (PENDENTES) -->
+        <section id="secContasReceber" class="section">
+            <div class="card">
+                <h2>⏳ Contas a Receber — Pendentes</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">
+                    Vendas marcadas como <strong style="color:#f1c40f">PENDENTE</strong>. Ao receber, use <strong>💰 Receber</strong> — o valor entra nas caixas pela regra do caderno.
+                </p>
+                <div class="dash-grid">
+                    <div class="dash-card"><div class="lbl">Total a Receber</div><div class="valor" id="dashReceberTotal" style="color:#f1c40f">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl">Qtd. Pendentes</div><div class="valor" id="dashReceberQtd" style="color:#f1c40f">0</div></div>
+                    <div class="dash-card"><div class="lbl">Vencidas / sem data</div><div class="valor" id="dashReceberVencidas" style="color:#e74c3c">0</div></div>
+                </div>
+                <div class="toolbar">
+                    <input class="search" id="buscaReceber" placeholder="Buscar cliente, nº, motor..." oninput="renderContasReceber()">
+                    <button type="button" class="btn-info btn-sm" onclick="renderContasReceber()">🔄 Atualizar</button>
+                </div>
+                <div style="overflow-x:auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th>Emissão</th>
+                                <th>Vencimento</th>
+                                <th>Cliente</th>
+                                <th>Motor / Serviço</th>
+                                <th>Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbContasReceber"></tbody>
+                    </table>
                 </div>
             </div>
         </section>
@@ -980,6 +1028,7 @@ window.abrirSecao = function(id, btn) {
     if (btn) btn.classList.add('active');
     var grupos = [
         { secs: ['secOrcamentos', 'secOrcamentosAberto', 'secLancarVenda', 'secVendas'], grupo: 'menuGrupoVendas', toggle: 'btnMenuVendas' },
+        { secs: ['secContasReceber'], grupo: 'menuGrupoReceber', toggle: 'btnMenuReceber' },
         { secs: ['secCaixas', 'secPessoal', 'secBoletosForn'], grupo: 'menuGrupoCaixas', toggle: 'btnMenuCaixas' }
     ];
     grupos.forEach(function(g) {
@@ -1006,6 +1055,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     [
         { btn: 'btnMenuVendas', grupo: 'menuGrupoVendas' },
+        { btn: 'btnMenuReceber', grupo: 'menuGrupoReceber' },
         { btn: 'btnMenuCaixas', grupo: 'menuGrupoCaixas' }
     ].forEach(function(cfg) {
         var btnGrupo = document.getElementById(cfg.btn);
@@ -1769,6 +1819,7 @@ function refreshFromStore(fromDisk) {
     renderDocumentos();
     monitorarVencimentosDocumentos();
     renderClientes(); renderProdutos(); renderServicos(); renderOrcamentos(); renderVendas();
+    if (typeof renderContasReceber === 'function') renderContasReceber();
     renderExtratoCaixa(); atualizarDashCaixa(); renderPessoal(); renderBoletosFornecedor();
     atualizarDatalists();
     atualizarSelectServicosOrc();
@@ -2258,9 +2309,11 @@ function itensDocParaCarrinhoVenda(itens) {
         const qtd = Number(it.qtdBaixa ?? it.qtd) || 1;
         const total = it.total || it.valor || 0;
         const ehServ = it.tipo === 'servico' || it.categoriaOS === 'servico' || String(it.nome || '').includes('[M.O.]') || String(it.nome || '').includes('[Mão de Obra]');
+        const custoUn = Number(it.custoOriginal != null ? it.custoOriginal : it.valorPago) || 0;
         return {
             nome: it.nome, valor: total, valorOriginal: it.valor || (qtd > 0 ? total / qtd : total),
-            custoOriginal: it.custoOriginal, margemOriginal: it.margemOriginal,
+            custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
+            margemOriginal: it.margemOriginal,
             qtdBaixa: qtd, idProd: it.idProd, ehEstoque: !!it.ehEstoque,
             categoriaOS: ehServ ? 'servico' : 'material', unidadeMedida: it.unidadeMedida
         };
@@ -2388,12 +2441,18 @@ window.addAoCarrinhoVenda_Avulso = function() {
     const n = (document.getElementById('vendaAvulsoNome').value || '').trim();
     const qtd = window.parseQtdEstoque(document.getElementById('vendaAvulsoQtd').value);
     const precoUn = parseFloat(document.getElementById('vendaAvulsoValor').value);
-    if (!n || isNaN(precoUn)) return Swal.fire('Atenção', 'Preencha a descrição e o valor.', 'warning');
+    const custoUn = parseFloat(document.getElementById('vendaAvulsoCusto').value) || 0;
+    if (!n || isNaN(precoUn)) return Swal.fire('Atenção', 'Preencha a descrição e o valor cobrado.', 'warning');
     if (isNaN(qtd) || qtd <= 0) return Swal.fire('Atenção', 'Quantidade inválida.', 'warning');
     const nomeExibir = `${n} — ${window.formatQtdComUnidade(qtd, 'un')}`;
-    carrinhoVenda.push({ nome: nomeExibir, valor: precoUn * qtd, valorOriginal: precoUn, qtdBaixa: qtd, ehEstoque: false, categoriaOS: 'material', unidadeMedida: 'un' });
+    carrinhoVenda.push({
+        nome: nomeExibir, valor: precoUn * qtd, valorOriginal: precoUn,
+        qtdBaixa: qtd, ehEstoque: false, categoriaOS: 'material', unidadeMedida: 'un',
+        custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd
+    });
     document.getElementById('vendaAvulsoNome').value = '';
     document.getElementById('vendaAvulsoQtd').value = '1';
+    document.getElementById('vendaAvulsoCusto').value = '';
     document.getElementById('vendaAvulsoValor').value = '';
     renderCarrinhoVenda();
 };
@@ -2442,17 +2501,42 @@ window.addAoCarrinhoVenda_Rebob = function() {
 };
 
 function calcSplitCaixaVenda() {
-    let totalPecasCobrado = 0, totalPecasCusto = 0, totalMO = 0;
+    let gastoMP = 0, totalMO = 0, custoNubank = 0, lucro = 0;
     carrinhoVenda.forEach(i => {
-        const cobrado = i.valor || 0;
-        const custo = Number(i.custoOriginal != null ? (i.custoOriginal * (i.qtdBaixa || 1)) : 0) || 0;
-        const ehServ = (i.categoriaOS || '') === 'servico' || String(i.nome || '').includes('[M.O.]') ||
-            String(i.nome || '').toLowerCase().includes('rebob');
-        if (ehServ) totalMO += cobrado;
-        else { totalPecasCobrado += cobrado; totalPecasCusto += custo; }
+        const cobrado = Number(i.valor) || 0;
+        const qtd = Number(i.qtdBaixa || i.qtd) || 1;
+        let custo = 0;
+        if (i.totalPago != null && i.totalPago !== '') custo = Number(i.totalPago) || 0;
+        else if (i.valorPago != null && i.valorPago !== '') custo = (Number(i.valorPago) || 0) * qtd;
+        else if (i.custoOriginal != null && i.custoOriginal !== '') custo = (Number(i.custoOriginal) || 0) * qtd;
+        const ehMO = (i.categoriaOS || '') === 'servico' || String(i.nome || '').includes('[M.O.]') ||
+            String(i.nome || '').toLowerCase().includes('rebob') ||
+            String(i.nome || '').toLowerCase().includes('mão de obra') ||
+            String(i.nome || '').toLowerCase().includes('mao de obra');
+        if (ehMO && custo <= 0) {
+            totalMO += cobrado;
+        } else if (i.ehEstoque) {
+            if (custo > 0) { gastoMP += custo; lucro += Math.max(0, cobrado - custo); }
+            else gastoMP += cobrado;
+        } else if (custo > 0) {
+            // Torno / avulso com custo → Nubank Empresa (pago) + lucro nos Investimentos
+            custoNubank += custo;
+            lucro += Math.max(0, cobrado - custo);
+        } else if (ehMO) {
+            totalMO += cobrado;
+        } else {
+            gastoMP += cobrado;
+        }
     });
-    const lucro = Math.max(0, totalPecasCobrado - totalPecasCusto);
-    return { totalPecasCobrado, totalPecasCusto, totalMO, lucro };
+    return {
+        totalPecasCobrado: gastoMP + lucro,
+        totalPecasCusto: gastoMP,
+        totalMO: totalMO + custoNubank,
+        lucro,
+        gastoMP,
+        custoNubank,
+        moPura: totalMO
+    };
 }
 
 function atualizarSplitCaixaUI() {
@@ -2460,22 +2544,19 @@ function atualizarSplitCaixaUI() {
     if (!carrinhoVenda.length) { box.style.display = 'none'; return; }
     const tipo = document.getElementById('vendaTipoCaixa')?.value || 'COMPLETA';
     const s = calcSplitCaixaVenda();
-    // Caderno Halana: gastos(custo) → MP | M.O. → Nubank Emp. | lucro → Investimentos
-    const gasto = (s.totalPecasCusto > 0) ? s.totalPecasCusto : s.totalPecasCobrado;
-    const lucro = Math.max(0, s.totalPecasCobrado - ((s.totalPecasCusto > 0) ? s.totalPecasCusto : s.totalPecasCobrado));
     let html = '<strong>Divisão do caixa (igual ao caderno, quando PAGO):</strong><br>';
     if (tipo === 'NUBANK') {
-        html += '💜 Nubank Empresa (M.O.): ' + fmt(s.totalMO + s.totalPecasCobrado);
+        html += '💜 Nubank Empresa: ' + fmt(s.totalMO + s.gastoMP + s.lucro);
     } else if (tipo === 'PICPAY_EMP') {
-        html += '🏢 PicPay Emp. (gastos): ' + fmt(gasto) +
-            '<br>💜 Nubank Empresa (M.O.): ' + fmt(s.totalMO) +
-            '<br>💎 Nubank Investimentos (lucro): ' + fmt(lucro);
+        html += '🏢 PicPay Emp. (gastos/rolamento): ' + fmt(s.gastoMP) +
+            '<br>💜 Nubank Empresa (M.O. + torno pago): ' + fmt(s.totalMO) +
+            '<br>💎 Nubank Investimentos (lucro): ' + fmt(s.lucro);
     } else {
-        html += '🤝 Mercado Pago (gastos): ' + fmt(gasto) +
-            '<br>💜 Nubank Empresa (M.O.): ' + fmt(s.totalMO) +
-            '<br>💎 Nubank Investimentos (lucro): ' + fmt(lucro);
+        html += '🤝 Mercado Pago (gastos/rolamento): ' + fmt(s.gastoMP) +
+            '<br>💜 Nubank Empresa (M.O. + torno pago): ' + fmt(s.totalMO) +
+            '<br>💎 Nubank Investimentos (lucro): ' + fmt(s.lucro);
     }
-    html += '<br><span style="color:#f1c40f">Ex. caderno R$ 384: rolamento gasto no MP · M.O. R$ 130 na Empresa · lucro R$ 50 nos Investimentos.</span>';
+    html += '<br><span style="color:#f1c40f">Ex. R$ 384: MP R$ 42 (custo rolamento) · Empresa R$ 250 (M.O. 130 + torno 120) · Lucro R$ 92 (42+50).</span>';
     box.innerHTML = html; box.style.display = 'block';
 }
 window.atualizarSplitCaixaUI = atualizarSplitCaixaUI;
@@ -2509,6 +2590,9 @@ window.editarItemCarrinhoVenda = function(idx) {
     } else {
         document.getElementById('vendaAvulsoNome').value = String(item.nome).split(' — ')[0].trim();
         document.getElementById('vendaAvulsoQtd').value = window.formatQtdEstoque(item.qtdBaixa || 1);
+        const custoEd = Number(item.custoOriginal != null ? item.custoOriginal : item.valorPago) || 0;
+        const custoEl = document.getElementById('vendaAvulsoCusto');
+        if (custoEl) custoEl.value = custoEd ? custoEd.toFixed(2) : '';
         document.getElementById('vendaAvulsoValor').value = (item.valorOriginal ?? item.valor).toFixed(2);
     }
 };
@@ -2711,8 +2795,10 @@ window.finalizarVenda = async function() {
         const idSalvo = docId;
         await window.limparFormVenda();
         renderOrcamentos(); renderVendas();
+        if (typeof renderContasReceber === 'function') renderContasReceber();
         if (tipoDoc === 'VENDA') {
-            abrirSecao('secVendas', document.querySelector('[data-sec=secVendas]'));
+            abrirSecao(status === 'PENDENTE' ? 'secContasReceber' : 'secVendas',
+                document.querySelector(status === 'PENDENTE' ? '[data-sec=secContasReceber]' : '[data-sec=secVendas]'));
         }
         if (foiPago) {
             const r = await Swal.fire({
@@ -2970,6 +3056,7 @@ window.confirmarConversao = async function() {
         await dbSet('documentos/'+id, novoDoc);
         fecharModal('modalConverter');
         renderOrcamentos(); renderVendas();
+        if (typeof renderContasReceber === 'function') renderContasReceber();
         if (status === 'PAGO') {
             const r = await Swal.fire({
                 icon: 'success', title: 'Venda concluída!',
@@ -2977,10 +3064,11 @@ window.confirmarConversao = async function() {
                 showCancelButton: true, confirmButtonText: '📄 Comprovante', cancelButtonText: 'Ir para Vendas'
             });
             if (r.isConfirmed) window.comprovantePago(id);
+            else abrirSecao('secVendas', document.querySelector('[data-sec=secVendas]'));
         } else {
-            Swal.fire({ icon:'success', title:'Venda concluída!', text:'Orçamento convertido. Veja em Vendas Concluídas.', timer:2500, showConfirmButton:false });
+            Swal.fire({ icon:'success', title:'Venda pendente!', text:'Foi para Contas a Receber.', timer:2200, showConfirmButton:false });
+            abrirSecao('secContasReceber', document.querySelector('[data-sec=secContasReceber]'));
         }
-        abrirSecao('secVendas', document.querySelector('[data-sec=secVendas]'));
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
 };
 
@@ -2993,7 +3081,8 @@ function itemEhServicoDoc(i) {
 
 function calcSplitVendaDoc(doc) {
     const itens = doc.itens || [];
-    let totalPecasCobrado = 0, totalPecasCusto = 0, totalMO = 0;
+    let gastoMP = 0, totalMO = 0, custoNubank = 0, lucroPecas = 0;
+    let totalPecasCobrado = 0, totalPecasCusto = 0;
     itens.forEach(i => {
         const cobrado = Number(i.total != null ? i.total : i.valor) || 0;
         const qtd = Number(i.qtd || i.qtdBaixa) || 1;
@@ -3001,11 +3090,42 @@ function calcSplitVendaDoc(doc) {
         if (i.totalPago != null && i.totalPago !== '') custo = Number(i.totalPago) || 0;
         else if (i.valorPago != null && i.valorPago !== '') custo = (Number(i.valorPago) || 0) * qtd;
         else if (i.custoOriginal != null && i.custoOriginal !== '') custo = (Number(i.custoOriginal) || 0) * qtd;
-        if (itemEhServicoDoc(i)) totalMO += cobrado;
-        else { totalPecasCobrado += cobrado; totalPecasCusto += custo; }
+        const ehMO = itemEhServicoDoc(i);
+        if (ehMO && custo <= 0) {
+            totalMO += cobrado;
+        } else if (i.ehEstoque) {
+            totalPecasCobrado += cobrado;
+            if (custo > 0) {
+                gastoMP += custo;
+                totalPecasCusto += custo;
+                lucroPecas += Math.max(0, cobrado - custo);
+            } else {
+                gastoMP += cobrado;
+                totalPecasCusto += cobrado;
+            }
+        } else if (custo > 0) {
+            // Avulso/torno: o que você pagou fica no Nubank Empresa; diferença = lucro
+            custoNubank += custo;
+            lucroPecas += Math.max(0, cobrado - custo);
+            totalPecasCobrado += cobrado;
+            totalPecasCusto += custo;
+        } else if (ehMO) {
+            totalMO += cobrado;
+        } else {
+            gastoMP += cobrado;
+            totalPecasCobrado += cobrado;
+            totalPecasCusto += cobrado;
+        }
     });
-    const lucroPecas = Math.max(0, totalPecasCobrado - totalPecasCusto);
-    return { totalPecasCobrado, totalPecasCusto, totalMO, lucroPecas };
+    return {
+        totalPecasCobrado,
+        totalPecasCusto,
+        totalMO: totalMO + custoNubank,
+        lucroPecas,
+        gastoMP,
+        custoNubank,
+        moPura: totalMO
+    };
 }
 
 async function lancarVendaNasCaixas(doc, tipoVenda) {
@@ -3018,33 +3138,34 @@ async function lancarVendaNasCaixas(doc, tipoVenda) {
             tipo: 'ENTRADA', descricao: desc + (descExtra || ''), valor: Math.round(valor * 100) / 100,
             categoria: categoria || 'RECEITA_VENDA',
             dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda',
-            splitMO: s.totalMO, splitPecas: s.totalPecasCobrado, splitCusto: s.totalPecasCusto, splitLucro: s.lucroPecas
+            splitMO: s.moPura, splitPecas: s.totalPecasCobrado, splitCusto: s.totalPecasCusto,
+            splitLucro: s.lucroPecas, splitCustoNubank: s.custoNubank
         });
     };
 
     if (tipoVenda === 'APENAS_PECAS') tipoVenda = 'PICPAY_EMP';
     if (tipoVenda === 'APENAS_MO') tipoVenda = 'NUBANK';
 
-    // Regra caderno Halana (áudio 3):
-    // Gastos (custo peças/rolamento) → Mercado Pago / PicPay
-    // Mão de obra → Nubank Empresa
-    // Lucro → Nubank Investimentos
-    const temCusto = s.totalPecasCusto > 0;
-    const gastoPecas = temCusto ? s.totalPecasCusto : s.totalPecasCobrado;
-    const lucroPecas = temCusto ? Math.max(0, s.totalPecasCobrado - s.totalPecasCusto) : 0;
-    const gastoLabel = ` (gastos/custo peças ${fmt(gastoPecas)})`;
-    const moLabel = ` (mão de obra ${fmt(s.totalMO)})`;
+    // Caderno:
+    // Rolamento/peça estoque (custo) → Mercado Pago / PicPay
+    // M.O. + custo pago do torno/avulso → Nubank Empresa
+    // Lucro (cobrado − custo) → Nubank Investimentos
+    const gastoPecas = s.gastoMP;
+    const moMaisTorno = s.totalMO;
+    const lucroPecas = s.lucroPecas;
+    const gastoLabel = ` (gastos/rolamento ${fmt(gastoPecas)})`;
+    const moLabel = ` (M.O. ${fmt(s.moPura)}` + (s.custoNubank > 0 ? ` + torno/avulso pago ${fmt(s.custoNubank)}` : '') + ')';
     const lucroLabel = ` (lucro ${fmt(lucroPecas)})`;
 
     if (tipoVenda === 'PICPAY_EMP') {
         await lancar('picpayempresas', gastoPecas, gastoLabel, 'GASTOS_PECAS');
-        await lancar('nubank', s.totalMO, moLabel, 'MAO_DE_OBRA');
+        await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
         await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
     } else if (tipoVenda === 'NUBANK') {
-        await lancar('nubank', s.totalMO + s.totalPecasCobrado, ' (tudo Nubank Empresa)', 'MAO_DE_OBRA');
+        await lancar('nubank', s.moPura + s.custoNubank + s.gastoMP + lucroPecas, ' (tudo Nubank Empresa)', 'MAO_DE_OBRA');
     } else { // COMPLETA / MERCADO_PAGO
         await lancar('mercadopago', gastoPecas, gastoLabel, 'GASTOS_PECAS');
-        await lancar('nubank', s.totalMO, moLabel, 'MAO_DE_OBRA');
+        await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
         await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
     }
 }
@@ -3077,31 +3198,92 @@ window.renderOrcamentos = renderOrcamentos;
 function renderVendas() {
     const busca = (document.getElementById('buscaVenda').value||'').toLowerCase();
     const tb = document.getElementById('tbVendas'); tb.innerHTML = '';
-    const vendas = documentos.filter(d => d.tipo === 'VENDA');
-    let tot = 0, pagas = 0, pend = 0, qtdPend = 0;
-    vendas.forEach(d => {
-        const v = parseFloat(d.total) || 0;
-        tot += v;
-        if (d.statusPagamento === 'PAGO') pagas += v;
-        else { pend += v; qtdPend++; }
-    });
+    const vendas = documentos.filter(d => d.tipo === 'VENDA' && (d.statusPagamento || '') === 'PAGO');
+    let tot = 0;
+    vendas.forEach(d => { tot += parseFloat(d.total) || 0; });
     const elTot = document.getElementById('dashVendasTotal'); if (elTot) elTot.textContent = fmt(tot);
-    const elPag = document.getElementById('dashVendasPagas'); if (elPag) elPag.textContent = fmt(pagas);
-    const elPend = document.getElementById('dashVendasPendentes'); if (elPend) elPend.textContent = fmt(pend);
-    const elQtd = document.getElementById('dashVendasQtdPend'); if (elQtd) elQtd.textContent = String(qtdPend);
+    const elQtd = document.getElementById('dashVendasPagasQtd'); if (elQtd) elQtd.textContent = String(vendas.length);
 
-    vendas.filter(d => !busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numeroFmt||d.numero).includes(busca) || (d.motor||'').toLowerCase().includes(busca))
-    .forEach(d => {
-        const st = d.statusPagamento === 'PAGO' ? '<span class="badge badge-pago">PAGO</span>' : '<span class="badge badge-pend">PENDENTE</span>';
+    const lista = vendas.filter(d => !busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numeroFmt||d.numero).includes(busca) || (d.motor||'').toLowerCase().includes(busca));
+    if (!lista.length) {
+        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#95a5a6;padding:18px">Nenhuma venda paga. Pendentes ficam em Contas a Receber.</td></tr>';
+        return;
+    }
+    lista.forEach(d => {
+        const st = '<span class="badge badge-pago">PAGO</span>';
         const cx = rotuloCaixaVenda(d.tipoVenda);
-        const trClass = d.statusPagamento === 'PENDENTE' ? ' class="linha-pendente"' : '';
-        tb.innerHTML += `<tr${trClass}>
+        tb.innerHTML += `<tr>
             <td>${d.numeroFmt||d.numero}</td><td>${d.dataConversao||d.data||'-'}</td><td>${d.clienteNome}</td>
             <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td><td>${st}</td><td>${cx}</td>
             <td class="celula-acoes"><div class="acoes-flex">${montarAcoesVendaHtml(d)}</div></td></tr>`;
     });
 }
 window.renderVendas = renderVendas;
+
+function vencimentoDocReceber(d) {
+    return d.validade || d.vencimento || d.dataReceber || '';
+}
+
+function renderContasReceber() {
+    const tb = document.getElementById('tbContasReceber');
+    if (!tb) return;
+    const buscaEl = document.getElementById('buscaReceber');
+    const busca = ((buscaEl && buscaEl.value) || '').toLowerCase();
+    const pendentes = documentos.filter(d => d.tipo === 'VENDA' && (d.statusPagamento || '') !== 'PAGO');
+    let tot = 0, vencidas = 0;
+    const hojeStr = hoje();
+    pendentes.forEach(d => {
+        tot += parseFloat(d.total) || 0;
+        const venc = vencimentoDocReceber(d);
+        if (!venc || venc < hojeStr) vencidas++;
+    });
+    const elTot = document.getElementById('dashReceberTotal'); if (elTot) elTot.textContent = fmt(tot);
+    const elQtd = document.getElementById('dashReceberQtd'); if (elQtd) elQtd.textContent = String(pendentes.length);
+    const elVenc = document.getElementById('dashReceberVencidas'); if (elVenc) elVenc.textContent = String(vencidas);
+    const badge = document.getElementById('badgeQtdReceber');
+    if (badge) {
+        if (pendentes.length > 0) {
+            badge.style.display = 'inline-flex';
+            badge.textContent = String(pendentes.length);
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    tb.innerHTML = '';
+    const lista = pendentes
+        .filter(d => !busca || (d.clienteNome || '').toLowerCase().includes(busca) ||
+            String(d.numeroFmt || d.numero).includes(busca) || (d.motor || '').toLowerCase().includes(busca))
+        .sort((a, b) => {
+            const va = vencimentoDocReceber(a) || '9999';
+            const vb = vencimentoDocReceber(b) || '9999';
+            return va.localeCompare(vb);
+        });
+    if (!lista.length) {
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#95a5a6;padding:18px">Nenhuma conta pendente. Vendas com status PENDENTE aparecem aqui.</td></tr>';
+        return;
+    }
+    lista.forEach(d => {
+        const venc = vencimentoDocReceber(d);
+        let vencTxt = venc || '—';
+        let vencStyle = '';
+        if (venc && venc < hojeStr) {
+            vencTxt = venc + ' <span class="badge badge-pend">VENCIDA</span>';
+            vencStyle = ' style="color:#e74c3c;font-weight:700"';
+        } else if (venc && venc === hojeStr) {
+            vencTxt = venc + ' <span class="badge badge-orc">HOJE</span>';
+        }
+        tb.innerHTML += `<tr class="linha-pendente">
+            <td>${d.numeroFmt || d.numero}</td>
+            <td>${d.dataConversao || d.data || '-'}</td>
+            <td${vencStyle}>${vencTxt}</td>
+            <td>${d.clienteNome || '-'}</td>
+            <td>${descMotorDoc(d)}</td>
+            <td style="font-weight:700;color:#f1c40f">${fmt(d.total)}</td>
+            <td class="celula-acoes"><div class="acoes-flex">${montarAcoesVendaHtml(d)}</div></td>
+        </tr>`;
+    });
+}
+window.renderContasReceber = renderContasReceber;
 
 window._urlSebraeNfe = 'https://amei.sebrae.com.br/auth/realms/externo/protocol/openid-connect/auth?client_id=emissor-nfe-frontend&redirect_uri=https%3A%2F%2Femissornfe.sebrae.com.br%2F&state=8d2bc86c-0e59-4ece-85a1-37899762e0da&response_mode=fragment&response_type=code&scope=openid&nonce=42ceb5f7-4211-498c-9b29-53626699c44e';
 window._urlNfeGov = 'https://www.nfse.gov.br/EmissorNacional/Login?ReturnUrl=%2fEmissorNacional';
@@ -3310,6 +3492,7 @@ window.marcarComoPago = async function(id) {
         await dbUpdate('documentos/' + id, { statusPagamento: 'PAGO', dataRecebimento: hoje(), dataStr: agora() });
         await lancarVendaNasCaixas({ ...d, id, statusPagamento: 'PAGO' }, d.tipoVenda || 'COMPLETA');
         renderVendas();
+        if (typeof renderContasReceber === 'function') renderContasReceber();
         Swal.fire({ icon: 'success', title: 'Recebido!', text: 'Lançado nas caixas conforme a regra.', timer: 2200, showConfirmButton: false });
     } catch (e) {
         Swal.fire('Erro', e.message, 'error');
@@ -3341,6 +3524,7 @@ window.estornarPagamento = async function(id) {
             dataRecebimento: null
         });
         renderVendas();
+        if (typeof renderContasReceber === 'function') renderContasReceber();
         if (typeof renderExtratoCaixa === 'function') renderExtratoCaixa();
         if (typeof renderPessoal === 'function') renderPessoal();
         Swal.fire({ icon: 'success', title: 'Estornado!', text: 'Venda voltou para Contas a Receber.', timer: 2200, showConfirmButton: false });
