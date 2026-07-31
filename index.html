@@ -803,7 +803,10 @@
                     <div class="tab-caixa ni" data-conta="nubank_invest" onclick="selecionarCaixa('nubank_invest',this)">💎 Nubank Investimentos (Lucro)</div>
                 </div>
                 <div class="dash-grid" id="dashCaixa">
-                    <div class="dash-card"><div class="lbl">Saldo Inicial</div><div class="valor" id="cxIni">R$ 0</div></div>
+                    <div class="dash-card" style="cursor:pointer" onclick="definirSaldoInicial()" title="Clique para editar o saldo inicial">
+                        <div class="lbl">Saldo Inicial <small style="opacity:.8">(editar)</small></div>
+                        <div class="valor" id="cxIni">R$ 0</div>
+                    </div>
                     <div class="dash-card"><div class="lbl">Entradas</div><div class="valor" id="cxEnt" style="color:#2ecc71">R$ 0</div></div>
                     <div class="dash-card"><div class="lbl">Saídas</div><div class="valor" id="cxSai" style="color:#e74c3c">R$ 0</div></div>
                     <div class="dash-card"><div class="lbl">Saldo Atual</div><div class="valor" id="cxSaldo">R$ 0</div></div>
@@ -811,7 +814,9 @@
                 <div class="toolbar">
                     <button class="btn-entrada" onclick="abrirModalLanc('ENTRADA')">➕ Entrada</button>
                     <button class="btn-saida" onclick="abrirModalLanc('SAIDA')">➖ Saída</button>
-                    <button class="btn-gold btn-sm" onclick="definirSaldoInicial()">💰 Saldo Inicial</button>
+                    <button class="btn-gold btn-sm" onclick="definirSaldoInicial()" title="Corrigir saldo inicial desta conta">✏️ Editar Saldo Inicial</button>
+                    <button class="btn-danger btn-sm" onclick="zerarCaixaAtiva()" title="Zerar saldo inicial e/ou apagar lançamentos desta conta">🧹 Zerar Caixa</button>
+                    <button class="btn-info btn-sm" onclick="sincronizarPainelCaixa()" title="Atualizar números e extrato (nuvem + tela)">🔄 Sincronizar Painel</button>
                     <button class="btn-info btn-sm" onclick="fechamentoCaixaDia()">📅 Fechamento do Dia</button>
                     <button class="btn-danger btn-sm" onclick="corrigirSplitsVendasPagas()" title="Corrige lançamentos antigos que colocaram o total inteiro no MP">🔧 Corrigir splits antigos</button>
                 </div>
@@ -4001,13 +4006,147 @@ window.salvarLancamento = async function() {
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
 };
 
+function nomeContaCaixa(conta) {
+    const map = {
+        mercadopago: 'Mercado Pago (Gastos/Peças)',
+        picpayempresas: 'PicPay Emp. (Forn.)',
+        nubank: 'Nubank Empresa (M.O.)',
+        nubank_invest: 'Nubank Investimentos (Lucro)'
+    };
+    return map[conta] || conta;
+}
+
 window.definirSaldoInicial = async function() {
-    const v = prompt('Saldo inicial (use ponto para centavos):');
-    if (!v) return;
-    const val = parseFloat(v.replace(',','.'));
-    if (isNaN(val)) return alert('Valor inválido');
-    await dbSet(`contas/${contaCaixaAtiva}/status`, { saldoInicial: val });
-    Swal.fire({ icon:'success', title:'Saldo inicial definido!', timer:1500, showConfirmButton:false });
+    const conta = contaCaixaAtiva;
+    const atual = Number(saldosIniciais[conta]) || 0;
+    const { value, isConfirmed } = await Swal.fire({
+        title: 'Editar saldo inicial',
+        html: 'Conta: <b>' + nomeContaCaixa(conta) + '</b><br>Valor atual: <b>' + fmt(atual) + '</b>',
+        input: 'text',
+        inputValue: atual.toFixed(2).replace('.', ','),
+        inputLabel: 'Novo saldo inicial (R$)',
+        inputPlaceholder: '0,00',
+        showCancelButton: true,
+        confirmButtonText: '💾 Salvar',
+        cancelButtonText: 'Cancelar',
+        inputValidator: (v) => {
+            const n = parseFloat(String(v || '').replace(/\./g, '').replace(',', '.'));
+            if (v === '' || v == null) return 'Informe o valor';
+            if (isNaN(n)) return 'Valor inválido';
+            return null;
+        }
+    });
+    if (!isConfirmed) return;
+    let raw = String(value || '').trim();
+    // aceita 1.234,56 ou 1234.56 ou 1234,56
+    if (raw.includes(',') && raw.includes('.')) raw = raw.replace(/\./g, '').replace(',', '.');
+    else raw = raw.replace(',', '.');
+    const val = Math.round((parseFloat(raw) || 0) * 100) / 100;
+    try {
+        await dbSet(`contas/${conta}/status`, { saldoInicial: val });
+        saldosIniciais[conta] = val;
+        atualizarDashCaixa();
+        Swal.fire({ icon: 'success', title: 'Saldo inicial atualizado!', text: nomeContaCaixa(conta) + ': ' + fmt(val), timer: 1800, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message || String(e), 'error');
+    }
+};
+
+window.zerarCaixaAtiva = async function() {
+    const conta = contaCaixaAtiva;
+    const qtd = (extratos[conta] || []).length;
+    const atualIni = Number(saldosIniciais[conta]) || 0;
+    const escolha = await Swal.fire({
+        title: 'Zerar caixa?',
+        html: 'Conta: <b>' + nomeContaCaixa(conta) + '</b><br>' +
+            'Saldo inicial atual: <b>' + fmt(atualIni) + '</b><br>' +
+            'Lançamentos nesta conta: <b>' + qtd + '</b>',
+        icon: 'warning',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Zerar só saldo inicial',
+        denyButtonText: 'Zerar tudo (inicial + lançamentos)',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#f39c12',
+        denyButtonColor: '#c0392b'
+    });
+    if (escolha.isDismissed) return;
+    try {
+        if (escolha.isConfirmed) {
+            await dbSet(`contas/${conta}/status`, { saldoInicial: 0 });
+            saldosIniciais[conta] = 0;
+            atualizarDashCaixa();
+            Swal.fire({ icon: 'success', title: 'Saldo inicial zerado', timer: 1600, showConfirmButton: false });
+            return;
+        }
+        if (escolha.isDenied) {
+            const conf = await Swal.fire({
+                title: 'Confirmar zerar tudo?',
+                html: 'Isso apaga <b>todos os lançamentos</b> de <b>' + nomeContaCaixa(conta) + '</b> e zera o saldo inicial.<br><br>Não apaga vendas nem outras contas.',
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, zerar tudo',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#c0392b'
+            });
+            if (!conf.isConfirmed) return;
+            const ids = (extratos[conta] || []).map(e => e.id).filter(Boolean);
+            for (const eid of ids) {
+                await dbRemove(`contas/${conta}/extrato/${eid}`);
+            }
+            await dbSet(`contas/${conta}/status`, { saldoInicial: 0 });
+            saldosIniciais[conta] = 0;
+            extratos[conta] = [];
+            // limpa objeto no store se sobrar lixo
+            if (store.contas && store.contas[conta]) {
+                store.contas[conta].extrato = {};
+                if (!store.contas[conta].status) store.contas[conta].status = {};
+                store.contas[conta].status.saldoInicial = 0;
+                saveStore();
+            }
+            atualizarDashCaixa();
+            renderExtratoCaixa();
+            if (conta === 'nubank_invest' && typeof renderPessoal === 'function') renderPessoal();
+            Swal.fire({ icon: 'success', title: 'Caixa zerada!', text: nomeContaCaixa(conta) + ' sem lançamentos e saldo inicial 0.', timer: 2200, showConfirmButton: false });
+        }
+    } catch (e) {
+        Swal.fire('Erro', e.message || String(e), 'error');
+    }
+};
+
+window.sincronizarPainelCaixa = async function() {
+    try {
+        Swal.fire({ title: 'Sincronizando…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const fb = window.__fb;
+        if (fb && window.__fbReady) {
+            const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
+            const cloud = snap.val();
+            if (cloud && storeTemDados(cloud)) {
+                aplicarStoreDaNuvem(cloud);
+            } else {
+                refreshFromStore(true);
+            }
+        } else {
+            refreshFromStore(true);
+        }
+        atualizarDashCaixa();
+        renderExtratoCaixa();
+        if (typeof renderPessoal === 'function') renderPessoal();
+        const { ent, sai, saldo } = calcSaldoConta(contaCaixaAtiva);
+        Swal.fire({
+            icon: 'success',
+            title: 'Painel sincronizado',
+            html: '<b>' + nomeContaCaixa(contaCaixaAtiva) + '</b><br>' +
+                'Inicial: ' + fmt(saldosIniciais[contaCaixaAtiva] || 0) +
+                ' · Entradas: ' + fmt(ent) +
+                ' · Saídas: ' + fmt(sai) +
+                ' · Atual: ' + fmt(saldo),
+            timer: 2500,
+            showConfirmButton: false
+        });
+    } catch (e) {
+        Swal.fire('Erro ao sincronizar', e.message || String(e), 'error');
+    }
 };
 
 window.excluirLancCaixa = async function(conta, id) {
