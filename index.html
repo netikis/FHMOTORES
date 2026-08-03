@@ -2557,54 +2557,24 @@ window.addAoCarrinhoVenda_Rebob = function() {
 };
 
 function calcSplitCaixaVenda() {
-    let gastoMP = 0, gastoPicPay = 0, totalMO = 0, custoNubank = 0, lucro = 0;
-    let totalPecasCobrado = 0, totalPecasCusto = 0;
-    carrinhoVenda.forEach(i => {
-        const cobrado = Number(i.valor) || 0;
-        const qtd = Number(i.qtdBaixa || i.qtd) || 1;
-        let custo = 0;
-        if (i.totalPago != null && i.totalPago !== '') custo = Number(i.totalPago) || 0;
-        else if (i.valorPago != null && i.valorPago !== '') custo = (Number(i.valorPago) || 0) * qtd;
-        else if (i.custoOriginal != null && i.custoOriginal !== '') custo = (Number(i.custoOriginal) || 0) * qtd;
-        const ehMO = (i.categoriaOS || '') === 'servico' || String(i.nome || '').includes('[M.O.]') ||
-            String(i.nome || '').toLowerCase().includes('rebob') ||
-            String(i.nome || '').toLowerCase().includes('mão de obra') ||
-            String(i.nome || '').toLowerCase().includes('mao de obra');
-        if (ehMO && custo <= 0) {
-            totalMO += cobrado;
-            return;
-        }
-        if (custo > 0) {
-            const dest = destinoCustoItem(i);
-            const luc = Math.max(0, cobrado - custo);
-            lucro += luc;
-            totalPecasCobrado += cobrado;
-            totalPecasCusto += custo;
-            if (dest === 'picpayempresas') gastoPicPay += custo;
-            else if (dest === 'nubank') custoNubank += custo;
-            else gastoMP += custo;
-            return;
-        }
-        if (ehMO) totalMO += cobrado;
-        else if (i.ehEstoque) {
-            gastoMP += cobrado;
-            totalPecasCobrado += cobrado;
-            totalPecasCusto += cobrado;
-        } else {
-            gastoPicPay += cobrado;
-            totalPecasCobrado += cobrado;
-            totalPecasCusto += cobrado;
-        }
-    });
+    // Mesma regra da venda salva (soma lucro rolamento + capacitor etc.)
+    const fakeDoc = { itens: carrinhoVenda.map(i => ({
+        ...i,
+        total: i.valor,
+        qtd: i.qtdBaixa || i.qtd || 1,
+        qtdBaixa: i.qtdBaixa || i.qtd || 1
+    })) };
+    const s = calcSplitVendaDoc(fakeDoc);
     return {
-        totalPecasCobrado,
-        totalPecasCusto,
-        totalMO: totalMO + custoNubank,
-        lucro,
-        gastoMP,
-        gastoPicPay,
-        custoNubank,
-        moPura: totalMO
+        totalPecasCobrado: s.totalPecasCobrado,
+        totalPecasCusto: s.totalPecasCusto,
+        totalMO: s.totalMO,
+        lucro: s.lucroPecas,
+        gastoMP: s.gastoMP,
+        gastoPicPay: s.gastoPicPay,
+        custoNubank: s.custoNubank,
+        moPura: s.moPura,
+        detalhesLucro: s.detalhesLucro || []
     };
 }
 
@@ -2621,8 +2591,13 @@ function atualizarSplitCaixaUI() {
             '<br>🏢 PicPay Emp. (custo fornecedor): ' + fmt(s.gastoPicPay) +
             '<br>💜 Nubank Empresa (M.O.' + (s.custoNubank > 0 ? ' + torno' : '') + '): ' + fmt(s.totalMO) +
             '<br>💎 Nubank Investimentos (lucro): ' + fmt(s.lucro);
+        if (s.detalhesLucro && s.detalhesLucro.length) {
+            html += '<br><small style="color:#2ecc71">Soma lucros: ' +
+                s.detalhesLucro.map(d => d.nome + ' ' + fmt(d.lucro)).join(' + ') +
+                ' = ' + fmt(s.lucro) + '</small>';
+        }
     }
-    html += '<br><span style="color:#f1c40f">Ex. Luis R$ 492: MP R$ 32 · PicPay R$ 18,31 · Empresa R$ 390 · Lucro R$ 51,69.</span>';
+    html += '<br><span style="color:#f1c40f">Ex. Luis: lucro rolamento R$ 40 + capacitor R$ 11,69 = R$ 51,69 no Investimentos.</span>';
     box.innerHTML = html; box.style.display = 'block';
 }
 window.atualizarSplitCaixaUI = atualizarSplitCaixaUI;
@@ -3142,6 +3117,46 @@ window.confirmarConversao = async function() {
     } catch(err) { Swal.fire('Erro', err.message, 'error'); }
 };
 
+function parseMoneyFH(v) {
+    if (v == null || v === '') return 0;
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    let s = String(v).trim().replace(/R\$\s?/i, '').replace(/\s/g, '');
+    if (!s) return 0;
+    if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(',', '.');
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+}
+
+function round2FH(n) {
+    return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+/** Cobrado + custo + lucro de cada linha (rolamento/capacitor/etc.) */
+function valoresLinhaSplitItem(i) {
+    const qtd = Number(i && (i.qtdBaixa != null ? i.qtdBaixa : i.qtd)) || 1;
+    let cobrado = 0;
+    if (i.total != null && i.total !== '') cobrado = parseMoneyFH(i.total);
+    else cobrado = parseMoneyFH(i.valor);
+    let custo = 0;
+    if (i.totalPago != null && i.totalPago !== '') custo = parseMoneyFH(i.totalPago);
+    else if (i.valorPago != null && i.valorPago !== '') custo = round2FH(parseMoneyFH(i.valorPago) * qtd);
+    else if (i.custoOriginal != null && i.custoOriginal !== '') custo = round2FH(parseMoneyFH(i.custoOriginal) * qtd);
+    // Fallback: custo do cadastro do produto (capacitor no estoque sem custo na linha)
+    if (!(custo > 0) && i.idProd && typeof produtos !== 'undefined') {
+        const p = produtos.find(x => x.id === i.idProd);
+        if (p) custo = round2FH(parseMoneyFH(p.custo) * qtd);
+    }
+    // Se cobrado unitário ficou < custo, tenta valor * qtd
+    if (custo > 0 && cobrado > 0 && cobrado < custo && qtd >= 1) {
+        const alt = round2FH(parseMoneyFH(i.valor) * qtd);
+        if (alt >= custo) cobrado = alt;
+    }
+    // Carrinho: valor ja e total da linha — ok
+    const lucro = round2FH(Math.max(0, cobrado - custo));
+    return { qtd, cobrado: round2FH(cobrado), custo: round2FH(custo), lucro };
+}
+
 function itemEhServicoDoc(i) {
     const nome = String(i.nome || '').toLowerCase();
     return i.tipo === 'servico' || i.categoriaOS === 'servico' ||
@@ -3153,61 +3168,61 @@ function calcSplitVendaDoc(doc) {
     const itens = doc.itens || [];
     let gastoMP = 0, gastoPicPay = 0, totalMO = 0, custoNubank = 0, lucroPecas = 0;
     let totalPecasCobrado = 0, totalPecasCusto = 0;
+    const detalhesLucro = [];
     itens.forEach(i => {
-        const cobrado = Number(i.total != null ? i.total : i.valor) || 0;
-        const qtd = Number(i.qtd || i.qtdBaixa) || 1;
-        let custo = 0;
-        if (i.totalPago != null && i.totalPago !== '') custo = Number(i.totalPago) || 0;
-        else if (i.valorPago != null && i.valorPago !== '') custo = (Number(i.valorPago) || 0) * qtd;
-        else if (i.custoOriginal != null && i.custoOriginal !== '') custo = (Number(i.custoOriginal) || 0) * qtd;
+        const { cobrado, custo, lucro } = valoresLinhaSplitItem(i);
         const ehMO = itemEhServicoDoc(i);
-        if (ehMO && custo <= 0) {
-            totalMO += cobrado;
+        if (ehMO && !(custo > 0)) {
+            totalMO = round2FH(totalMO + cobrado);
             return;
         }
         if (custo > 0) {
             const dest = destinoCustoItem(i);
-            const luc = Math.max(0, cobrado - custo);
-            lucroPecas += luc;
-            totalPecasCobrado += cobrado;
-            totalPecasCusto += custo;
-            if (dest === 'picpayempresas') gastoPicPay += custo;
-            else if (dest === 'nubank') custoNubank += custo;
-            else gastoMP += custo;
+            lucroPecas = round2FH(lucroPecas + lucro);
+            totalPecasCobrado = round2FH(totalPecasCobrado + cobrado);
+            totalPecasCusto = round2FH(totalPecasCusto + custo);
+            if (lucro > 0) {
+                const nomeCurto = String(i.nome || 'peça').split('—')[0].split('(Cód')[0].trim();
+                detalhesLucro.push({ nome: nomeCurto, lucro, custo, cobrado, dest });
+            }
+            if (dest === 'picpayempresas') gastoPicPay = round2FH(gastoPicPay + custo);
+            else if (dest === 'nubank') custoNubank = round2FH(custoNubank + custo);
+            else gastoMP = round2FH(gastoMP + custo);
             return;
         }
         if (ehMO) {
-            totalMO += cobrado;
+            totalMO = round2FH(totalMO + cobrado);
         } else if (i.ehEstoque) {
-            gastoMP += cobrado;
-            totalPecasCobrado += cobrado;
-            totalPecasCusto += cobrado;
+            gastoMP = round2FH(gastoMP + cobrado);
+            totalPecasCobrado = round2FH(totalPecasCobrado + cobrado);
+            totalPecasCusto = round2FH(totalPecasCusto + cobrado);
         } else {
-            gastoPicPay += cobrado;
-            totalPecasCobrado += cobrado;
-            totalPecasCusto += cobrado;
+            gastoPicPay = round2FH(gastoPicPay + cobrado);
+            totalPecasCobrado = round2FH(totalPecasCobrado + cobrado);
+            totalPecasCusto = round2FH(totalPecasCusto + cobrado);
         }
     });
     return {
         totalPecasCobrado,
         totalPecasCusto,
-        totalMO: totalMO + custoNubank,
-        lucroPecas,
-        gastoMP,
-        gastoPicPay,
-        custoNubank,
-        moPura: totalMO
+        totalMO: round2FH(totalMO + custoNubank),
+        lucroPecas: round2FH(lucroPecas),
+        gastoMP: round2FH(gastoMP),
+        gastoPicPay: round2FH(gastoPicPay),
+        custoNubank: round2FH(custoNubank),
+        moPura: round2FH(totalMO),
+        detalhesLucro
     };
 }
 
 async function lancarVendaNasCaixas(doc, tipoVenda) {
     const s = calcSplitVendaDoc(doc);
     const num = doc.numeroFmt || doc.numero;
-    const desc = `Venda #${num} — ${doc.clienteNome}`;
+    const desc = Venda # — ;
     const lancar = async (conta, valor, descExtra, categoria) => {
         if (!(valor > 0.0001)) return;
-        await dbPush(`contas/${conta}/extrato`, {
-            tipo: 'ENTRADA', descricao: desc + (descExtra || ''), valor: Math.round(valor * 100) / 100,
+        await dbPush(contas//extrato, {
+            tipo: 'ENTRADA', descricao: desc + (descExtra || ''), valor: round2FH(valor),
             categoria: categoria || 'RECEITA_VENDA',
             dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda',
             splitMO: s.moPura, splitPecas: s.totalPecasCobrado, splitCusto: s.totalPecasCusto,
@@ -3219,33 +3234,26 @@ async function lancarVendaNasCaixas(doc, tipoVenda) {
     if (tipoVenda === 'APENAS_PECAS') tipoVenda = 'PICPAY_EMP';
     if (tipoVenda === 'APENAS_MO') tipoVenda = 'NUBANK';
 
-    // Caderno Halana (áudio 03-08 — nota Luis R$ 492):
-    // Rolamento (custo) → Mercado Pago
-    // Capacitor/isolamento fornecedor (custo) → PicPay Emp.
-    // M.O. rebobinamento → Nubank Empresa
-    // Torno/terceiro (custo) → Nubank Empresa
-    // Lucro das peças → Nubank Investimentos
+    // Halana 03-08-03: Investimentos = lucro rolamento + lucro capacitor (40 + 11,69 = 51,69)
     const moMaisTorno = s.totalMO;
     const lucroPecas = s.lucroPecas;
-    const moLabel = ` (M.O. ${fmt(s.moPura)}` + (s.custoNubank > 0 ? ` + torno ${fmt(s.custoNubank)}` : '') + ')';
-    const lucroLabel = ` (lucro ${fmt(lucroPecas)})`;
+    const moLabel =  (M.O.  + (s.custoNubank > 0 ?  + torno  : '') + ')';
+    let lucroLabel =  (lucro );
+    if (s.detalhesLucro && s.detalhesLucro.length) {
+        lucroLabel = ' (lucro ' + s.detalhesLucro.map(d => d.nome + ' ' + fmt(d.lucro)).join(' + ') +
+            ' = ' + fmt(lucroPecas) + ')';
+    }
 
     if (tipoVenda === 'NUBANK') {
         await lancar('nubank', s.moPura + s.custoNubank + s.gastoMP + s.gastoPicPay + lucroPecas, ' (tudo Nubank Empresa)', 'MAO_DE_OBRA');
         return;
     }
 
-    // COMPLETA / MERCADO_PAGO / PICPAY_EMP: respeita destino por item (áudio Luis)
     let mp = s.gastoMP, pic = s.gastoPicPay;
-    if (tipoVenda === 'PICPAY_EMP' && mp > 0 && pic <= 0) {
-        // atalho antigo "só fornecedor": se não houver destino MP, joga custos de peça no PicPay
-        pic = mp; mp = 0;
-    }
-    if (tipoVenda === 'MERCADO_PAGO' && pic > 0 && mp <= 0) {
-        mp = pic; pic = 0;
-    }
-    await lancar('mercadopago', mp, ` (gastos/rolamento ${fmt(mp)})`, 'GASTOS_PECAS');
-    await lancar('picpayempresas', pic, ` (gastos/fornecedor ${fmt(pic)})`, 'GASTOS_PECAS');
+    if (tipoVenda === 'PICPAY_EMP' && mp > 0 && pic <= 0) { pic = mp; mp = 0; }
+    if (tipoVenda === 'MERCADO_PAGO' && pic > 0 && mp <= 0) { mp = pic; pic = 0; }
+    await lancar('mercadopago', mp,  (gastos/rolamento ), 'GASTOS_PECAS');
+    await lancar('picpayempresas', pic,  (gastos/fornecedor ), 'GASTOS_PECAS');
     await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
     await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
 }
@@ -4338,8 +4346,9 @@ window.corrigirSplitsVendasPagas = async function() {
     if (!vendas.length) return Swal.fire('Info', 'Nenhuma venda paga encontrada.', 'info');
     const r = await Swal.fire({
         title: 'Corrigir splits das caixas?',
-        html: `Vai <b>remover</b> os lançamentos antigos de <b>${vendas.length}</b> venda(s) paga(s) e relançar com a regra nova:<br>
-        <b>MP/PicPay = só peças</b> · <b>Nubank = só rebobinamento</b>.`,
+        html: `Vai <b>remover</b> os lançamentos antigos de <b>${vendas.length}</b> venda(s) paga(s) e relançar:<br>
+        MP = custo rolamento · PicPay = custo capacitor · Nubank Emp. = M.O. ·
+        <b>Investimentos = soma dos lucros</b> (ex.: 40 + 11,69 = 51,69).`,
         icon: 'warning', showCancelButton: true,
         confirmButtonText: '🔧 Corrigir agora', cancelButtonText: 'Cancelar'
     });
