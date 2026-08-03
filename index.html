@@ -687,10 +687,17 @@
                 <div class="bloco" style="border-color:rgba(231,76,60,.5)">
                     <h3 style="margin:0 0 8px;font-size:13px;color:#e74c3c">3. Item Avulso (sem estoque)</h3>
                     <div class="row">
-                        <div class="col" style="flex:2"><label>Descrição</label><input id="vendaAvulsoNome" placeholder="Ex: SERVIÇO TORNO, peça avulsa..."></div>
+                        <div class="col" style="flex:2"><label>Descrição</label><input id="vendaAvulsoNome" placeholder="Ex: CAPACITOR, ISOLAMENTO, SERVIÇO TORNO..." oninput="sugerirDestinoCustoAvulso()"></div>
                         <div class="col"><label>Qtd</label><input id="vendaAvulsoQtd" value="1" inputmode="decimal"></div>
-                        <div class="col"><label>Valor pago (custo)</label><input type="number" step="0.01" id="vendaAvulsoCusto" placeholder="120,00"></div>
-                        <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="vendaAvulsoValor" placeholder="170,00"></div>
+                        <div class="col"><label>Valor pago (custo)</label><input type="number" step="0.01" id="vendaAvulsoCusto" placeholder="18,31"></div>
+                        <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="vendaAvulsoValor" placeholder="30,00"></div>
+                        <div class="col" style="min-width:180px"><label>Custo vai para</label>
+                            <select id="vendaAvulsoDestinoCusto">
+                                <option value="picpayempresas">🏢 PicPay Emp. (fornecedor)</option>
+                                <option value="mercadopago">🤝 Mercado Pago (rolamento/net)</option>
+                                <option value="nubank">💜 Nubank Empresa (torno/terceiro)</option>
+                            </select>
+                        </div>
                         <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-success" onclick="addAoCarrinhoVenda_Avulso()">+ ADD</button></div>
                     </div>
                 </div>
@@ -2320,7 +2327,8 @@ function itensDocParaCarrinhoVenda(itens) {
             custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
             margemOriginal: it.margemOriginal,
             qtdBaixa: qtd, idProd: it.idProd, ehEstoque: !!it.ehEstoque,
-            categoriaOS: ehServ ? 'servico' : 'material', unidadeMedida: it.unidadeMedida
+            categoriaOS: ehServ ? 'servico' : 'material', unidadeMedida: it.unidadeMedida,
+            destinoCusto: it.destinoCusto || (ehServ ? null : destinoCustoItem(it))
         };
     });
 }
@@ -2336,7 +2344,8 @@ function itensCarrinhoParaDoc(itens) {
             tipo: ehServ ? 'servico' : 'peca', categoriaOS: ehServ ? 'servico' : 'material',
             idProd: it.idProd, ehEstoque: !!it.ehEstoque, unidadeMedida: it.unidadeMedida,
             custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
-            margemOriginal: it.margemOriginal
+            margemOriginal: it.margemOriginal,
+            destinoCusto: ehServ ? null : (it.destinoCusto || destinoCustoItem(it))
         };
     });
 }
@@ -2431,7 +2440,9 @@ window.addAoCarrinhoVenda_Estoque = function() {
     const nomeExibir = `${p.nome} (Cód: ${p.codigo || '-'}) — ${window.formatQtdComUnidade(qtd, ue)}`;
     carrinhoVenda.push({
         idProd: p.id, nome: nomeExibir, valor: precoUn * qtd, valorOriginal: precoUn,
-        custoOriginal: custoUn, margemOriginal: margem, qtdBaixa: qtd, ehEstoque: true, categoriaOS: 'material', unidadeMedida: ue
+        custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
+        margemOriginal: margem, qtdBaixa: qtd, ehEstoque: true, categoriaOS: 'material', unidadeMedida: ue,
+        destinoCusto: 'mercadopago'
     });
     document.getElementById('vendaProdBusca').value = '';
     ['vendaProdCusto', 'vendaProdMargem', 'vendaProdPreco'].forEach(id => document.getElementById(id).value = '');
@@ -2447,13 +2458,15 @@ window.addAoCarrinhoVenda_Avulso = function() {
     const qtd = window.parseQtdEstoque(document.getElementById('vendaAvulsoQtd').value);
     const precoUn = parseFloat(document.getElementById('vendaAvulsoValor').value);
     const custoUn = parseFloat(document.getElementById('vendaAvulsoCusto').value) || 0;
+    const destinoCusto = (document.getElementById('vendaAvulsoDestinoCusto') || {}).value || sugerirDestinoCustoPorNome(n);
     if (!n || isNaN(precoUn)) return Swal.fire('Atenção', 'Preencha a descrição e o valor cobrado.', 'warning');
     if (isNaN(qtd) || qtd <= 0) return Swal.fire('Atenção', 'Quantidade inválida.', 'warning');
     const nomeExibir = `${n} — ${window.formatQtdComUnidade(qtd, 'un')}`;
     carrinhoVenda.push({
         nome: nomeExibir, valor: precoUn * qtd, valorOriginal: precoUn,
         qtdBaixa: qtd, ehEstoque: false, categoriaOS: 'material', unidadeMedida: 'un',
-        custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd
+        custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
+        destinoCusto
     });
     document.getElementById('vendaAvulsoNome').value = '';
     document.getElementById('vendaAvulsoQtd').value = '1';
@@ -2461,6 +2474,33 @@ window.addAoCarrinhoVenda_Avulso = function() {
     document.getElementById('vendaAvulsoValor').value = '';
     renderCarrinhoVenda();
 };
+
+window.sugerirDestinoCustoAvulso = function() {
+    const n = (document.getElementById('vendaAvulsoNome') || {}).value || '';
+    const sel = document.getElementById('vendaAvulsoDestinoCusto');
+    if (sel) sel.value = sugerirDestinoCustoPorNome(n);
+};
+
+function sugerirDestinoCustoPorNome(nome) {
+    const n = String(nome || '').toLowerCase();
+    if (n.includes('torno') || n.includes('terceir')) return 'nubank';
+    if (n.includes('rolamento') || n.includes('internet') || n.includes('mercado pago')) return 'mercadopago';
+    if (n.includes('capacitor') || n.includes('isolamento') || n.includes('isolante') || n.includes('fornec') || n.includes('fio') || n.includes('verniz')) return 'picpayempresas';
+    return 'picpayempresas';
+}
+
+function destinoCustoItem(i) {
+    if (i && i.destinoCusto && ['mercadopago', 'picpayempresas', 'nubank'].includes(i.destinoCusto)) {
+        return i.destinoCusto;
+    }
+    const n = String(i && i.nome || '').toLowerCase();
+    if (n.includes('torno') || n.includes('terceir')) return 'nubank';
+    if (i && i.ehEstoque) return 'mercadopago';
+    if (n.includes('rolamento')) return 'mercadopago';
+    if (n.includes('capacitor') || n.includes('isolamento') || n.includes('isolante') || n.includes('fornec')) return 'picpayempresas';
+    if (i && !i.ehEstoque) return 'picpayempresas';
+    return 'mercadopago';
+}
 
 window.addAoCarrinhoVenda_MO = function() {
     const d = (document.getElementById('vendaMODesc').value || '').trim();
@@ -2506,7 +2546,8 @@ window.addAoCarrinhoVenda_Rebob = function() {
 };
 
 function calcSplitCaixaVenda() {
-    let gastoMP = 0, totalMO = 0, custoNubank = 0, lucro = 0;
+    let gastoMP = 0, gastoPicPay = 0, totalMO = 0, custoNubank = 0, lucro = 0;
+    let totalPecasCobrado = 0, totalPecasCusto = 0;
     carrinhoVenda.forEach(i => {
         const cobrado = Number(i.valor) || 0;
         const qtd = Number(i.qtdBaixa || i.qtd) || 1;
@@ -2520,25 +2561,37 @@ function calcSplitCaixaVenda() {
             String(i.nome || '').toLowerCase().includes('mao de obra');
         if (ehMO && custo <= 0) {
             totalMO += cobrado;
-        } else if (i.ehEstoque) {
-            if (custo > 0) { gastoMP += custo; lucro += Math.max(0, cobrado - custo); }
-            else gastoMP += cobrado;
-        } else if (custo > 0) {
-            // Torno / avulso com custo → Nubank Empresa (pago) + lucro nos Investimentos
-            custoNubank += custo;
-            lucro += Math.max(0, cobrado - custo);
-        } else if (ehMO) {
-            totalMO += cobrado;
-        } else {
+            return;
+        }
+        if (custo > 0) {
+            const dest = destinoCustoItem(i);
+            const luc = Math.max(0, cobrado - custo);
+            lucro += luc;
+            totalPecasCobrado += cobrado;
+            totalPecasCusto += custo;
+            if (dest === 'picpayempresas') gastoPicPay += custo;
+            else if (dest === 'nubank') custoNubank += custo;
+            else gastoMP += custo;
+            return;
+        }
+        if (ehMO) totalMO += cobrado;
+        else if (i.ehEstoque) {
             gastoMP += cobrado;
+            totalPecasCobrado += cobrado;
+            totalPecasCusto += cobrado;
+        } else {
+            gastoPicPay += cobrado;
+            totalPecasCobrado += cobrado;
+            totalPecasCusto += cobrado;
         }
     });
     return {
-        totalPecasCobrado: gastoMP + lucro,
-        totalPecasCusto: gastoMP,
+        totalPecasCobrado,
+        totalPecasCusto,
         totalMO: totalMO + custoNubank,
         lucro,
         gastoMP,
+        gastoPicPay,
         custoNubank,
         moPura: totalMO
     };
@@ -2549,19 +2602,16 @@ function atualizarSplitCaixaUI() {
     if (!carrinhoVenda.length) { box.style.display = 'none'; return; }
     const tipo = document.getElementById('vendaTipoCaixa')?.value || 'COMPLETA';
     const s = calcSplitCaixaVenda();
-    let html = '<strong>Divisão do caixa (igual ao caderno, quando PAGO):</strong><br>';
+    let html = '<strong>Divisão do caixa (caderno Halana, quando PAGO):</strong><br>';
     if (tipo === 'NUBANK') {
-        html += '💜 Nubank Empresa: ' + fmt(s.totalMO + s.gastoMP + s.lucro);
-    } else if (tipo === 'PICPAY_EMP') {
-        html += '🏢 PicPay Emp. (gastos/rolamento): ' + fmt(s.gastoMP) +
-            '<br>💜 Nubank Empresa (M.O. + torno pago): ' + fmt(s.totalMO) +
-            '<br>💎 Nubank Investimentos (lucro): ' + fmt(s.lucro);
+        html += '💜 Nubank Empresa: ' + fmt(s.moPura + s.custoNubank + s.gastoMP + s.gastoPicPay + s.lucro);
     } else {
-        html += '🤝 Mercado Pago (gastos/rolamento): ' + fmt(s.gastoMP) +
-            '<br>💜 Nubank Empresa (M.O. + torno pago): ' + fmt(s.totalMO) +
+        html += '🤝 Mercado Pago (custo rolamento/net): ' + fmt(s.gastoMP) +
+            '<br>🏢 PicPay Emp. (custo fornecedor): ' + fmt(s.gastoPicPay) +
+            '<br>💜 Nubank Empresa (M.O.' + (s.custoNubank > 0 ? ' + torno' : '') + '): ' + fmt(s.totalMO) +
             '<br>💎 Nubank Investimentos (lucro): ' + fmt(s.lucro);
     }
-    html += '<br><span style="color:#f1c40f">Ex. R$ 384: MP R$ 42 (custo rolamento) · Empresa R$ 250 (M.O. 130 + torno 120) · Lucro R$ 92 (42+50).</span>';
+    html += '<br><span style="color:#f1c40f">Ex. Luis R$ 492: MP R$ 32 · PicPay R$ 18,31 · Empresa R$ 390 · Lucro R$ 51,69.</span>';
     box.innerHTML = html; box.style.display = 'block';
 }
 window.atualizarSplitCaixaUI = atualizarSplitCaixaUI;
@@ -2598,7 +2648,9 @@ window.editarItemCarrinhoVenda = function(idx) {
         const custoEd = Number(item.custoOriginal != null ? item.custoOriginal : item.valorPago) || 0;
         const custoEl = document.getElementById('vendaAvulsoCusto');
         if (custoEl) custoEl.value = custoEd ? custoEd.toFixed(2) : '';
-        document.getElementById('vendaAvulsoValor').value = (item.valorOriginal ?? item.valor).toFixed(2);
+        document.getElementById('vendaAvulsoValor').value = (item.valorOriginal ?? (Number(item.valor) / (Number(item.qtdBaixa) || 1))).toFixed(2);
+        const destEl = document.getElementById('vendaAvulsoDestinoCusto');
+        if (destEl) destEl.value = item.destinoCusto || destinoCustoItem(item);
     }
 };
 
@@ -3086,7 +3138,7 @@ function itemEhServicoDoc(i) {
 
 function calcSplitVendaDoc(doc) {
     const itens = doc.itens || [];
-    let gastoMP = 0, totalMO = 0, custoNubank = 0, lucroPecas = 0;
+    let gastoMP = 0, gastoPicPay = 0, totalMO = 0, custoNubank = 0, lucroPecas = 0;
     let totalPecasCobrado = 0, totalPecasCusto = 0;
     itens.forEach(i => {
         const cobrado = Number(i.total != null ? i.total : i.valor) || 0;
@@ -3098,26 +3150,27 @@ function calcSplitVendaDoc(doc) {
         const ehMO = itemEhServicoDoc(i);
         if (ehMO && custo <= 0) {
             totalMO += cobrado;
-        } else if (i.ehEstoque) {
-            totalPecasCobrado += cobrado;
-            if (custo > 0) {
-                gastoMP += custo;
-                totalPecasCusto += custo;
-                lucroPecas += Math.max(0, cobrado - custo);
-            } else {
-                gastoMP += cobrado;
-                totalPecasCusto += cobrado;
-            }
-        } else if (custo > 0) {
-            // Avulso/torno: o que você pagou fica no Nubank Empresa; diferença = lucro
-            custoNubank += custo;
-            lucroPecas += Math.max(0, cobrado - custo);
+            return;
+        }
+        if (custo > 0) {
+            const dest = destinoCustoItem(i);
+            const luc = Math.max(0, cobrado - custo);
+            lucroPecas += luc;
             totalPecasCobrado += cobrado;
             totalPecasCusto += custo;
-        } else if (ehMO) {
+            if (dest === 'picpayempresas') gastoPicPay += custo;
+            else if (dest === 'nubank') custoNubank += custo;
+            else gastoMP += custo;
+            return;
+        }
+        if (ehMO) {
             totalMO += cobrado;
-        } else {
+        } else if (i.ehEstoque) {
             gastoMP += cobrado;
+            totalPecasCobrado += cobrado;
+            totalPecasCusto += cobrado;
+        } else {
+            gastoPicPay += cobrado;
             totalPecasCobrado += cobrado;
             totalPecasCusto += cobrado;
         }
@@ -3128,6 +3181,7 @@ function calcSplitVendaDoc(doc) {
         totalMO: totalMO + custoNubank,
         lucroPecas,
         gastoMP,
+        gastoPicPay,
         custoNubank,
         moPura: totalMO
     };
@@ -3138,41 +3192,49 @@ async function lancarVendaNasCaixas(doc, tipoVenda) {
     const num = doc.numeroFmt || doc.numero;
     const desc = `Venda #${num} — ${doc.clienteNome}`;
     const lancar = async (conta, valor, descExtra, categoria) => {
-        if (!(valor > 0)) return;
+        if (!(valor > 0.0001)) return;
         await dbPush(`contas/${conta}/extrato`, {
             tipo: 'ENTRADA', descricao: desc + (descExtra || ''), valor: Math.round(valor * 100) / 100,
             categoria: categoria || 'RECEITA_VENDA',
             dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda',
             splitMO: s.moPura, splitPecas: s.totalPecasCobrado, splitCusto: s.totalPecasCusto,
-            splitLucro: s.lucroPecas, splitCustoNubank: s.custoNubank
+            splitLucro: s.lucroPecas, splitCustoNubank: s.custoNubank,
+            splitMP: s.gastoMP, splitPicPay: s.gastoPicPay
         });
     };
 
     if (tipoVenda === 'APENAS_PECAS') tipoVenda = 'PICPAY_EMP';
     if (tipoVenda === 'APENAS_MO') tipoVenda = 'NUBANK';
 
-    // Caderno:
-    // Rolamento/peça estoque (custo) → Mercado Pago / PicPay
-    // M.O. + custo pago do torno/avulso → Nubank Empresa
-    // Lucro (cobrado − custo) → Nubank Investimentos
-    const gastoPecas = s.gastoMP;
+    // Caderno Halana (áudio 03-08 — nota Luis R$ 492):
+    // Rolamento (custo) → Mercado Pago
+    // Capacitor/isolamento fornecedor (custo) → PicPay Emp.
+    // M.O. rebobinamento → Nubank Empresa
+    // Torno/terceiro (custo) → Nubank Empresa
+    // Lucro das peças → Nubank Investimentos
     const moMaisTorno = s.totalMO;
     const lucroPecas = s.lucroPecas;
-    const gastoLabel = ` (gastos/rolamento ${fmt(gastoPecas)})`;
-    const moLabel = ` (M.O. ${fmt(s.moPura)}` + (s.custoNubank > 0 ? ` + torno/avulso pago ${fmt(s.custoNubank)}` : '') + ')';
+    const moLabel = ` (M.O. ${fmt(s.moPura)}` + (s.custoNubank > 0 ? ` + torno ${fmt(s.custoNubank)}` : '') + ')';
     const lucroLabel = ` (lucro ${fmt(lucroPecas)})`;
 
-    if (tipoVenda === 'PICPAY_EMP') {
-        await lancar('picpayempresas', gastoPecas, gastoLabel, 'GASTOS_PECAS');
-        await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
-        await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
-    } else if (tipoVenda === 'NUBANK') {
-        await lancar('nubank', s.moPura + s.custoNubank + s.gastoMP + lucroPecas, ' (tudo Nubank Empresa)', 'MAO_DE_OBRA');
-    } else { // COMPLETA / MERCADO_PAGO
-        await lancar('mercadopago', gastoPecas, gastoLabel, 'GASTOS_PECAS');
-        await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
-        await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
+    if (tipoVenda === 'NUBANK') {
+        await lancar('nubank', s.moPura + s.custoNubank + s.gastoMP + s.gastoPicPay + lucroPecas, ' (tudo Nubank Empresa)', 'MAO_DE_OBRA');
+        return;
     }
+
+    // COMPLETA / MERCADO_PAGO / PICPAY_EMP: respeita destino por item (áudio Luis)
+    let mp = s.gastoMP, pic = s.gastoPicPay;
+    if (tipoVenda === 'PICPAY_EMP' && mp > 0 && pic <= 0) {
+        // atalho antigo "só fornecedor": se não houver destino MP, joga custos de peça no PicPay
+        pic = mp; mp = 0;
+    }
+    if (tipoVenda === 'MERCADO_PAGO' && pic > 0 && mp <= 0) {
+        mp = pic; pic = 0;
+    }
+    await lancar('mercadopago', mp, ` (gastos/rolamento ${fmt(mp)})`, 'GASTOS_PECAS');
+    await lancar('picpayempresas', pic, ` (gastos/fornecedor ${fmt(pic)})`, 'GASTOS_PECAS');
+    await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
+    await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
 }
 
 function renderOrcamentos() {
