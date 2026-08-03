@@ -680,6 +680,13 @@
                         <div class="col"><label>Margem %</label><input type="number" step="0.1" id="vendaProdMargem" oninput="recalcularPrecoVenda()"></div>
                         <div class="col"><label>Valor cobrado</label><input type="number" step="0.01" id="vendaProdPreco" oninput="recalcularMargemVenda()"></div>
                         <div class="col"><label>Total</label><input id="vendaProdTotalLinha" readonly style="color:#2ecc71;font-weight:bold"></div>
+                        <div class="col" style="min-width:180px"><label>Custo vai para</label>
+                            <select id="vendaProdDestinoCusto">
+                                <option value="mercadopago">🤝 Mercado Pago (rolamento/net)</option>
+                                <option value="picpayempresas">🏢 PicPay Emp. (fornecedor)</option>
+                                <option value="nubank">💜 Nubank Empresa (torno/terceiro)</option>
+                            </select>
+                        </div>
                         <div class="col col-btn"><label class="lbl-spacer">&nbsp;</label><button type="button" class="btn-success" onclick="addAoCarrinhoVenda_Estoque()">+ ADD</button></div>
                     </div>
                 </div>
@@ -2368,6 +2375,8 @@ window.preencherCamposVendaEstoque = function() {
         document.getElementById('vendaProdCusto').value = custo.toFixed(2);
         document.getElementById('vendaProdMargem').value = margem.toFixed(2);
         document.getElementById('vendaProdPreco').value = venda.toFixed(2);
+        const destEl = document.getElementById('vendaProdDestinoCusto');
+        if (destEl) destEl.value = sugerirDestinoCustoPorNome(p.nome);
         document.getElementById('vendaProdQtd').focus();
     } else {
         ['vendaProdCusto', 'vendaProdMargem', 'vendaProdPreco'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -2438,11 +2447,12 @@ window.addAoCarrinhoVenda_Estoque = function() {
     const selUn = document.getElementById('vendaUnidade');
     const ue = window.unidadeEfetivaVenda(p, selUn);
     const nomeExibir = `${p.nome} (Cód: ${p.codigo || '-'}) — ${window.formatQtdComUnidade(qtd, ue)}`;
+    const destinoCusto = (document.getElementById('vendaProdDestinoCusto') || {}).value || sugerirDestinoCustoPorNome(p.nome);
     carrinhoVenda.push({
         idProd: p.id, nome: nomeExibir, valor: precoUn * qtd, valorOriginal: precoUn,
         custoOriginal: custoUn, valorPago: custoUn, totalPago: custoUn * qtd,
         margemOriginal: margem, qtdBaixa: qtd, ehEstoque: true, categoriaOS: 'material', unidadeMedida: ue,
-        destinoCusto: 'mercadopago'
+        destinoCusto
     });
     document.getElementById('vendaProdBusca').value = '';
     ['vendaProdCusto', 'vendaProdMargem', 'vendaProdPreco'].forEach(id => document.getElementById(id).value = '');
@@ -2484,8 +2494,8 @@ window.sugerirDestinoCustoAvulso = function() {
 function sugerirDestinoCustoPorNome(nome) {
     const n = String(nome || '').toLowerCase();
     if (n.includes('torno') || n.includes('terceir')) return 'nubank';
-    if (n.includes('rolamento') || n.includes('internet') || n.includes('mercado pago')) return 'mercadopago';
     if (n.includes('capacitor') || n.includes('isolamento') || n.includes('isolante') || n.includes('fornec') || n.includes('fio') || n.includes('verniz')) return 'picpayempresas';
+    if (n.includes('rolamento') || n.includes('internet') || n.includes('mercado pago')) return 'mercadopago';
     return 'picpayempresas';
 }
 
@@ -2494,10 +2504,11 @@ function destinoCustoItem(i) {
         return i.destinoCusto;
     }
     const n = String(i && i.nome || '').toLowerCase();
+    // Nome manda antes do estoque: capacitor em estoque vai PicPay (áudio Halana 03-08-02)
     if (n.includes('torno') || n.includes('terceir')) return 'nubank';
-    if (i && i.ehEstoque) return 'mercadopago';
+    if (n.includes('capacitor') || n.includes('isolamento') || n.includes('isolante') || n.includes('fornec') || n.includes('fio') || n.includes('verniz')) return 'picpayempresas';
     if (n.includes('rolamento')) return 'mercadopago';
-    if (n.includes('capacitor') || n.includes('isolamento') || n.includes('isolante') || n.includes('fornec')) return 'picpayempresas';
+    if (i && i.ehEstoque) return 'mercadopago';
     if (i && !i.ehEstoque) return 'picpayempresas';
     return 'mercadopago';
 }
@@ -2636,6 +2647,8 @@ window.editarItemCarrinhoVenda = function(idx) {
         if (item.custoOriginal !== undefined) document.getElementById('vendaProdCusto').value = Number(item.custoOriginal).toFixed(2);
         if (item.margemOriginal !== undefined) document.getElementById('vendaProdMargem').value = Number(item.margemOriginal).toFixed(2);
         if (item.valorOriginal !== undefined) document.getElementById('vendaProdPreco').value = Number(item.valorOriginal).toFixed(2);
+        const destProd = document.getElementById('vendaProdDestinoCusto');
+        if (destProd) destProd.value = item.destinoCusto || destinoCustoItem(item);
         window.atualizarResumoEstoqueVenda();
         window.atualizarTotalLinhaVenda();
         document.getElementById('vendaProdQtd').focus();
