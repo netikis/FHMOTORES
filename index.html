@@ -193,6 +193,8 @@
         .doc-item.vencido { border-left: 4px solid #e74c3c; }
         .doc-item.alerta { border-left: 4px solid #f39c12; }
         #alerta-stack-global { position: fixed; bottom: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; max-height: 88vh; pointer-events: none; }
+        /* SweetAlert acima da tela de login */
+        .swal2-container { z-index: 1000000 !important; }
         #alerta-stack-global > div { pointer-events: auto; }
         #alerta-container-docs { --alerta-painel-largura: 380px; }
         #alerta-container-docs .alerta-painel-wrapper, #alerta-container-docs .alerta-barra-minimizada { width: var(--alerta-painel-largura); max-width: calc(100vw - 32px); box-sizing: border-box; }
@@ -222,6 +224,8 @@
         <label style="font-size:11px;color:#bdc3c7">Senha</label>
         <input id="loginSenha" type="password" autocomplete="current-password" style="width:100%;margin:4px 0 14px;padding:10px;border-radius:8px;border:1px solid #7f8c8d;background:#1a252f;color:#fff">
         <button type="button" id="btnLoginEntrar" class="btn-primary" style="width:100%;padding:12px">Entrar</button>
+        <button type="button" class="btn-gold" style="width:100%;padding:10px;margin-top:10px" onclick="restaurarBackupEmbutido(true)">♻ Restaurar backup 03/08</button>
+        <p style="font-size:11px;color:#95a5a6;margin:8px 0 0;text-align:center">Se perdeu os dados, restaure antes ou depois do login.</p>
         <p id="loginErro" style="display:none;color:#e74c3c;font-size:12px;margin-top:10px"></p>
     </div>
 </div>
@@ -960,7 +964,9 @@
                 <div class="toolbar" style="flex-wrap:wrap;gap:8px">
                     <button type="button" class="btn-success" onclick="enviarTudoParaFirebase()">☁ Enviar este PC → nuvem</button>
                     <button type="button" class="btn-info" onclick="baixarTudoDoFirebase()">⬇ Baixar nuvem → este PC</button>
+                    <button type="button" class="btn-gold" onclick="tentarRecuperarDadosLocais()">♻ Tentar recuperar dados locais</button>
                 </div>
+                <p style="font-size:11px;color:var(--muted);margin:8px 0 0">A sync <b>não apaga</b> vendas locais se a nuvem tiver menos documentos/clientes.</p>
             </div>
             <div class="card">
                 <h2>💾 Backup extra (arquivo)</h2>
@@ -969,9 +975,11 @@
                     <button type="button" class="btn-success" onclick="exportarBackupFH()">⬇️ Exportar Backup (.json)</button>
                     <label class="btn-gold" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;padding:8px 14px">
                         ⬆️ Importar Backup
-                        <input type="file" accept=".json,application/json" style="display:none" onchange="importarBackupFH(this.files[0]); this.value='';">
+                        <input id="inputImportBackupFH" type="file" accept=".json,application/json" style="display:none" onchange="importarBackupFH(this.files[0]); this.value='';">
                     </label>
+                    <button type="button" class="btn-primary" onclick="restaurarBackupEmbutido(true)">♻ Restaurar backup 03/08</button>
                 </div>
+                <p style="font-size:12px;color:#f1c40f;margin:8px 0 0">Se clicar em restaurar e abrir a pasta: escolha <b>backup-fh-motores-2026-08-03.json</b> (pasta Halana ou a pasta do sistema).</p>
                 <p id="infoPersistencia" style="font-size:11px;color:var(--muted);margin-top:10px"></p>
             </div>
         </section>
@@ -1098,6 +1106,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script src="firebase-env.js" onerror="console.warn('firebase-env.js ausente — rode npm run build')"></script>
 <script src="firebase-config.js"></script>
+<script src="backup-embutido.js" onerror="console.warn('Sem backup-embutido.js')"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
@@ -1252,6 +1261,21 @@ function contarRegistros(data) {
 
 function storeTemDados(data) {
     return contarRegistros(data).total > 0;
+}
+
+/** Impede que uma nuvem "pobre" (ex.: só logo + 4 serviços) apague vendas/clientes locais. */
+function nuvemEhMaisPobreQueLocal(cloud, local) {
+    const c = contarRegistros(cloud);
+    const l = contarRegistros(local);
+    if (!storeTemDados(cloud)) return true;
+    // Se o local tem documentos/vendas e a nuvem não tem (ou tem bem menos), não sobrescrever
+    if (l.documentos > 0 && c.documentos < l.documentos) return true;
+    if (l.clientes > 0 && c.clientes < l.clientes) return true;
+    if (l.produtos > 0 && c.produtos < l.produtos && c.documentos <= l.documentos) return true;
+    // Nuvem só com serviços (seed) enquanto o local tem cadastro real
+    if (l.total > c.total && (l.clientes + l.produtos + l.documentos) > 0 &&
+        (c.clientes + c.produtos + c.documentos) === 0) return true;
+    return false;
 }
 
 function parseStoreRaw(raw) {
@@ -1468,31 +1492,50 @@ function waitFirebase(ms) {
 
 let _fbSyncAtivo = false;
 
+async function reconciliarComNuvem() {
+    const fb = window.__fb;
+    if (!fb || !window.__fbReady) return;
+    const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
+    const cloud = snap.val();
+    const cloudTem = cloud && storeTemDados(cloud);
+    const localReal = contarRegistros(store);
+    const temCadastroReal = (localReal.clientes + localReal.produtos + localReal.documentos) > 0;
+
+    if (cloudTem && nuvemEhMaisPobreQueLocal(cloud, store) && temCadastroReal) {
+        console.warn('Nuvem mais pobre que o local — mantendo dados deste PC e reenviando.');
+        await enviarStoreParaNuvem();
+        atualizarStatusPersistencia(true, 'nuvem');
+    } else if (cloudTem && (!temCadastroReal || !nuvemEhMaisPobreQueLocal(cloud, store))) {
+        aplicarStoreDaNuvem(cloud);
+    } else if (temCadastroReal) {
+        await enviarStoreParaNuvem();
+        atualizarStatusPersistencia(true, 'nuvem');
+    } else {
+        atualizarStatusPersistencia(true, 'nuvem');
+    }
+}
+
 async function iniciarSyncAutomatico() {
     const fb = window.__fb;
-    if (!fb || !window.__fbReady || _fbSyncAtivo) return;
+    if (!fb || !window.__fbReady) return;
+    // Se já está ativo, só reconcilia (ex.: após restaurar backup)
+    if (_fbSyncAtivo) {
+        try { await reconciliarComNuvem(); } catch (e) { console.warn(e); }
+        return;
+    }
     _fbSyncAtivo = true;
     try {
-        const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
-        const cloud = snap.val();
-        const cloudTem = cloud && storeTemDados(cloud);
-        const localTem = storeTemDados(store);
+        await reconciliarComNuvem();
 
-        // Nuvem manda: o que o outro PC salvou aparece aqui sozinho
-        if (cloudTem) {
-            aplicarStoreDaNuvem(cloud);
-        } else if (localTem) {
-            // Primeira vez: sobe o que tem neste PC
-            await enviarStoreParaNuvem();
-            atualizarStatusPersistencia(true, 'nuvem');
-        } else {
-            atualizarStatusPersistencia(true, 'nuvem');
-        }
-
-        // Escuta ao vivo — qualquer alteração no outro PC atualiza esta tela
+        // Escuta ao vivo — só aplica se a nuvem NÃO for mais pobre que o local
         fb.onValue(fb.ref(fb.db, FB_ROOT), function(s) {
             const v = s.val();
-            if (!v || _fbAplicandoNuvem) return;
+            if (!v || _fbAplicandoNuvem || window.__bloqueiaSyncNuvem) return;
+            if (!storeTemDados(v)) return;
+            if (nuvemEhMaisPobreQueLocal(v, store)) {
+                console.warn('Ignorando sync ao vivo: nuvem com menos dados que este PC.');
+                return;
+            }
             aplicarStoreDaNuvem(v);
         });
         atualizarStatusPersistencia(true, 'nuvem');
@@ -1535,9 +1578,16 @@ function aplicarStoreDaNuvem(dados) {
     }
 }
 
-async function enviarStoreParaNuvem() {
+async function enviarStoreParaNuvem(opts) {
     const fb = window.__fb;
     if (!fb || _fbAplicandoNuvem) return false;
+    const forcar = opts && opts.forcar;
+    const cont = contarRegistros(store);
+    // Nunca gravar nuvem vazia / só seed — isso apaga vendas do outro PC
+    if (!forcar && cont.documentos === 0 && cont.clientes === 0 && cont.produtos === 0) {
+        console.warn('Envio à nuvem bloqueado: este PC não tem clientes/produtos/documentos.');
+        return false;
+    }
     const payload = sanitizarParaFirebase(store);
     if (payload._meta) delete payload._meta;
     await fb.set(fb.ref(fb.db, FB_ROOT), payload);
@@ -1613,6 +1663,17 @@ window.baixarTudoDoFirebase = async function() {
             });
         }
         const cont = contarRegistros(cloud);
+        const local = contarRegistros(store);
+        if (nuvemEhMaisPobreQueLocal(cloud, store)) {
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Nuvem tem MENOS dados que este PC',
+                html: 'Local: <b>' + local.documentos + '</b> docs · <b>' + local.clientes + '</b> clientes<br>' +
+                    'Nuvem: <b>' + cont.documentos + '</b> docs · <b>' + cont.clientes + '</b> clientes<br><br>' +
+                    'Baixar agora <b>apagaria</b> o que está neste navegador.<br>' +
+                    'Use <b>Enviar este PC → nuvem</b> no PC que ainda tem as vendas, ou importe um backup.'
+            });
+        }
         const conf = await Swal.fire({
             title: 'Baixar da nuvem?',
             html: 'Encontrados <b>' + cont.total + '</b> registros na nuvem.<br>Isso substitui os dados deste navegador.',
@@ -1624,6 +1685,56 @@ window.baixarTudoDoFirebase = async function() {
         Swal.fire({ icon: 'success', title: 'Dados atualizados!', html: cont.total + ' registros sincronizados.', timer: 2500, showConfirmButton: false });
     } catch (e) {
         Swal.fire('Erro ao baixar', msgErroFirebase(e), 'error');
+    }
+};
+
+window.tentarRecuperarDadosLocais = async function() {
+    try {
+        const fromIdb = await idbGetDados();
+        const fromLs = loadStoreFromLocalStorage();
+        const cIdb = contarRegistros(fromIdb);
+        const cLs = contarRegistros(fromLs);
+        const cNow = contarRegistros(store);
+        const melhor = (cIdb.total >= cLs.total && cIdb.documentos >= cLs.documentos) ? fromIdb : fromLs;
+        const cMelhor = contarRegistros(melhor);
+        if (!melhor || !storeTemDados(melhor)) {
+            return Swal.fire({
+                icon: 'info',
+                title: 'Nada recuperável neste navegador',
+                html: 'LocalStorage e IndexedDB estão vazios ou só com o seed (serviços).<br><br>' +
+                    '<b>Onde ainda pode ter:</b><br>' +
+                    '1) Outro computador onde as vendas ainda aparecem<br>' +
+                    '2) Firebase Console → Realtime Database → <b>fhmotores</b><br>' +
+                    '3) Arquivo de backup .json exportado antes<br>' +
+                    '4) Mesmo PC, mas outro navegador / outro endereço (arquivo local vs GitHub Pages)'
+            });
+        }
+        if (cMelhor.documentos <= cNow.documentos && cMelhor.clientes <= cNow.clientes && cMelhor.total <= cNow.total) {
+            return Swal.fire({
+                icon: 'info',
+                title: 'Nada melhor encontrado',
+                html: 'Backup interno: ' + cMelhor.clientes + ' cli · ' + cMelhor.produtos + ' prod · ' + cMelhor.documentos + ' docs<br>' +
+                    'Tela atual: ' + cNow.clientes + ' cli · ' + cNow.produtos + ' prod · ' + cNow.documentos + ' docs'
+            });
+        }
+        const conf = await Swal.fire({
+            title: 'Restaurar cópia interna?',
+            html: 'Encontramos uma cópia com:<br><b>' +
+                cMelhor.clientes + '</b> clientes · <b>' + cMelhor.produtos + '</b> produtos · <b>' +
+                cMelhor.documentos + '</b> docs<br><br>Isso substitui a tela atual.',
+            icon: 'question', showCancelButton: true,
+            confirmButtonText: 'Restaurar', cancelButtonText: 'Cancelar'
+        });
+        if (!conf.isConfirmed) return;
+        store = melhor;
+        saveStore();
+        refreshFromStore();
+        if (window.__fb && window.__fbReady) {
+            try { await enviarStoreParaNuvem(); } catch (e) { console.warn(e); }
+        }
+        Swal.fire({ icon: 'success', title: 'Dados restaurados!', timer: 2200, showConfirmButton: false });
+    } catch (e) {
+        Swal.fire('Erro', e.message || String(e), 'error');
     }
 };
 
@@ -1741,36 +1852,131 @@ window.exportarBackupFH = function() {
     }
 };
 
+function alertaFH(titulo, html, icon) {
+    if (window.Swal) return Swal.fire({ icon: icon || 'info', title: titulo, html: html });
+    alert(titulo + '\n\n' + String(html || '').replace(/<[^>]+>/g, ' '));
+    return Promise.resolve();
+}
+
+window.aplicarBackupObjeto = async function(raw, opts) {
+    opts = opts || {};
+    const parsed = parseStoreRaw(typeof raw === 'string' ? raw : JSON.stringify(raw));
+    if (!parsed) {
+        await alertaFH('Arquivo inválido', 'Não foi possível ler o backup.', 'warning');
+        return false;
+    }
+    const c = contarRegistros(parsed);
+    if ((c.clientes + c.produtos + c.documentos) === 0) {
+        await alertaFH('Backup vazio', 'Este arquivo não tem clientes/produtos/vendas.', 'warning');
+        return false;
+    }
+    if (opts.perguntar !== false) {
+        if (window.Swal) {
+            const conf = await Swal.fire({
+                title: 'Restaurar backup?',
+                html: '<b>' + c.clientes + '</b> clientes · <b>' + c.produtos + '</b> produtos · <b>' + c.documentos + '</b> notas/vendas<br><br>Isso substitui os dados atuais.',
+                icon: 'warning', showCancelButton: true,
+                confirmButtonText: 'Restaurar agora', cancelButtonText: 'Cancelar'
+            });
+            if (!conf.isConfirmed) return false;
+        } else if (!confirm('Restaurar ' + c.documentos + ' notas/vendas?')) {
+            return false;
+        }
+    }
+    window.__bloqueiaSyncNuvem = true;
+    try {
+        store = parsed;
+        const ok = saveStore();
+        if (!ok) {
+            await alertaFH('Erro ao salvar', 'O navegador não conseguiu gravar (memória cheia?). Tente de novo.', 'error');
+            return false;
+        }
+        try { await idbSetDados(store); } catch (e) { console.warn(e); }
+        try { refreshFromStore(); } catch (e) { console.warn(e); }
+        // NÃO espera Firebase — isso travava a tela sem mensagem
+        if (window.__fb && window.__fbReady) {
+            Promise.resolve().then(function() {
+                return enviarStoreParaNuvem();
+            }).catch(function(err) { console.warn(err); });
+        }
+        if (opts.recarregar !== false) {
+            alert('Backup restaurado!\n\n' + c.clientes + ' clientes\n' + c.produtos + ' produtos\n' + c.documentos + ' notas/vendas\n\nA página vai recarregar.');
+            location.reload();
+            return true;
+        }
+        return true;
+    } finally {
+        window.__bloqueiaSyncNuvem = false;
+    }
+};
+
 window.importarBackupFH = function(file) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async function(ev) {
         try {
-            const parsed = parseStoreRaw(ev.target.result);
-            if (!parsed || !storeTemDados(parsed)) {
-                return Swal.fire('Arquivo inválido', 'Este backup não contém cadastros.', 'warning');
-            }
-            const c = contarRegistros(parsed);
-            const conf = await Swal.fire({
-                title: 'Restaurar backup?',
-                html: `Isso <b>substitui</b> os dados atuais por:<br>
-                    ${c.clientes} clientes · ${c.produtos} produtos · ${c.documentos} orçamentos/vendas`,
-                icon: 'warning', showCancelButton: true,
-                confirmButtonText: 'Restaurar', cancelButtonText: 'Cancelar'
-            });
-            if (!conf.isConfirmed) return;
-            store = parsed;
-            saveStore();
-            refreshFromStore();
-            if (window.__fb) {
-                try { await enviarStoreParaNuvem(); } catch (err) { console.warn(err); }
-            }
-            Swal.fire({ icon:'success', title:'Backup restaurado!', text: window.__fb ? 'Também enviado à nuvem.' : '', timer: 2200, showConfirmButton:false });
+            await window.aplicarBackupObjeto(ev.target.result, { perguntar: true, recarregar: true });
         } catch (e) {
-            Swal.fire('Erro', e.message, 'error');
+            await alertaFH('Erro', e.message || String(e), 'error');
         }
     };
-    reader.readAsText(file);
+    reader.onerror = function() {
+        alertaFH('Erro', 'Não foi possível ler o arquivo.', 'error');
+    };
+    reader.readAsText(file, 'UTF-8');
+};
+
+window.abrirSeletorBackupFH = function() {
+    const el = document.getElementById('inputImportBackupFH');
+    if (el) el.click();
+    else {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = function() { window.importarBackupFH(input.files[0]); };
+        input.click();
+    }
+};
+
+/** Restaura backup: embutido → arquivo na pasta → seletor do Windows. */
+window.restaurarBackupEmbutido = async function(forcarPergunta) {
+    try {
+        // 1) Backup embutido (backup-embutido.js)
+        if (window.__FH_BACKUP_EMBUTIDO__ && typeof window.__FH_BACKUP_EMBUTIDO__ === 'object') {
+            return await window.aplicarBackupObjeto(window.__FH_BACKUP_EMBUTIDO__, {
+                perguntar: !!forcarPergunta,
+                recarregar: !!forcarPergunta
+            });
+        }
+        // 2) Mesma pasta do sistema (funciona em http://localhost)
+        const candidatos = [
+            'backup-fh-motores-2026-08-03.json',
+            'backup-para-restaurar.json',
+            'VIDEO E AUDIOS HALANA/backup-fh-motores-2026-08-03.json'
+        ];
+        for (let i = 0; i < candidatos.length; i++) {
+            try {
+                const resp = await fetch(candidatos[i], { cache: 'no-store' });
+                if (!resp.ok) continue;
+                const data = await resp.json();
+                return await window.aplicarBackupObjeto(data, {
+                    perguntar: !!forcarPergunta,
+                    recarregar: !!forcarPergunta
+                });
+            } catch (e) { /* tenta próximo */ }
+        }
+        // 3) Pedir o arquivo ao usuário (sempre funciona)
+        await alertaFH(
+            'Selecione o backup',
+            'Na janela que abrir, escolha o arquivo:<br><b>backup-fh-motores-2026-08-03.json</b>',
+            'info'
+        );
+        window.abrirSeletorBackupFH();
+        return false;
+    } catch (e) {
+        await alertaFH('Erro ao restaurar', e.message || String(e), 'error');
+        return false;
+    }
 };
 
 // ==================== GLOBAIS ====================
@@ -3218,10 +3424,10 @@ function calcSplitVendaDoc(doc) {
 async function lancarVendaNasCaixas(doc, tipoVenda) {
     const s = calcSplitVendaDoc(doc);
     const num = doc.numeroFmt || doc.numero;
-    const desc = Venda # — ;
+    const desc = 'Venda #' + num + ' — ' + (doc.clienteNome || '');
     const lancar = async (conta, valor, descExtra, categoria) => {
         if (!(valor > 0.0001)) return;
-        await dbPush(contas//extrato, {
+        await dbPush('contas/' + conta + '/extrato', {
             tipo: 'ENTRADA', descricao: desc + (descExtra || ''), valor: round2FH(valor),
             categoria: categoria || 'RECEITA_VENDA',
             dataStr: agora(), timestamp: Date.now(), docId: doc.id, origem: 'venda',
@@ -3237,8 +3443,8 @@ async function lancarVendaNasCaixas(doc, tipoVenda) {
     // Halana 03-08-03: Investimentos = lucro rolamento + lucro capacitor (40 + 11,69 = 51,69)
     const moMaisTorno = s.totalMO;
     const lucroPecas = s.lucroPecas;
-    const moLabel =  (M.O.  + (s.custoNubank > 0 ?  + torno  : '') + ')';
-    let lucroLabel =  (lucro );
+    const moLabel = ' (M.O.' + (s.custoNubank > 0 ? ' + torno' : '') + ')';
+    let lucroLabel = ' (lucro)';
     if (s.detalhesLucro && s.detalhesLucro.length) {
         lucroLabel = ' (lucro ' + s.detalhesLucro.map(d => d.nome + ' ' + fmt(d.lucro)).join(' + ') +
             ' = ' + fmt(lucroPecas) + ')';
@@ -3252,8 +3458,8 @@ async function lancarVendaNasCaixas(doc, tipoVenda) {
     let mp = s.gastoMP, pic = s.gastoPicPay;
     if (tipoVenda === 'PICPAY_EMP' && mp > 0 && pic <= 0) { pic = mp; mp = 0; }
     if (tipoVenda === 'MERCADO_PAGO' && pic > 0 && mp <= 0) { mp = pic; pic = 0; }
-    await lancar('mercadopago', mp,  (gastos/rolamento ), 'GASTOS_PECAS');
-    await lancar('picpayempresas', pic,  (gastos/fornecedor ), 'GASTOS_PECAS');
+    await lancar('mercadopago', mp, ' (gastos/rolamento)', 'GASTOS_PECAS');
+    await lancar('picpayempresas', pic, ' (gastos/fornecedor)', 'GASTOS_PECAS');
     await lancar('nubank', moMaisTorno, moLabel, 'MAO_DE_OBRA');
     await lancar('nubank_invest', lucroPecas, lucroLabel, 'LUCRO');
 }
@@ -4204,7 +4410,7 @@ window.sincronizarPainelCaixa = async function() {
         if (fb && window.__fbReady) {
             const snap = await fb.get(fb.ref(fb.db, FB_ROOT));
             const cloud = snap.val();
-            if (cloud && storeTemDados(cloud)) {
+            if (cloud && storeTemDados(cloud) && !nuvemEhMaisPobreQueLocal(cloud, store)) {
                 aplicarStoreDaNuvem(cloud);
             } else {
                 refreshFromStore(true);
@@ -4680,6 +4886,31 @@ gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; })
         });
     }
 
+    // Se a tela está vazia, tenta backup embutido ou JSON da pasta ANTES do sync Firebase
+    const cAntes = contarRegistros(store);
+    if ((cAntes.clientes + cAntes.produtos + cAntes.documentos) === 0) {
+        let rawAuto = window.__FH_BACKUP_EMBUTIDO__;
+        if (!rawAuto) {
+            try {
+                const r = await fetch('backup-para-restaurar.json', { cache: 'no-store' });
+                if (r.ok) rawAuto = await r.json();
+            } catch (e) { /* file:// sem fetch */ }
+        }
+        if (rawAuto) {
+            const ok = await window.aplicarBackupObjeto(rawAuto, { perguntar: false, recarregar: false });
+            if (ok && window.Swal) {
+                const cEmb = contarRegistros(store);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Backup restaurado!',
+                    html: cEmb.clientes + ' clientes · ' + cEmb.produtos + ' produtos · ' + cEmb.documentos + ' notas',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        }
+    }
+
     // Sync automático após login (não precisa clicar em sincronizar)
     if (window.__fbReady && window.__fb) {
         await iniciarSyncAutomatico();
@@ -4692,8 +4923,10 @@ gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; })
         else atualizarStatusPersistencia(true, 'local');
     }
 
-    // Seed tabela de rebobinamento só se ainda estiver vazia
-    if (!servicos.length) {
+    // Seed tabela de rebobinamento só se ainda estiver vazia E sem cadastro real
+    // (evita “sujar” a nuvem com 4 serviços quando o resto foi apagado)
+    const cInit = contarRegistros(store);
+    if (!servicos.length && cInit.clientes === 0 && cInit.produtos === 0 && cInit.documentos === 0) {
         const base = [
             { nome:'Rebobinamento', potencia:'0,75', polos:'2', fase:'Monofásico', valor:410 },
             { nome:'Rebobinamento', potencia:'1', polos:'2', fase:'Monofásico', valor:450 },
