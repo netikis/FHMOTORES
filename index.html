@@ -836,7 +836,7 @@
                     <button class="btn-danger btn-sm" onclick="zerarCaixaAtiva()" title="Zerar saldo inicial e/ou apagar lançamentos desta conta">🧹 Zerar Caixa</button>
                     <button class="btn-info btn-sm" onclick="sincronizarPainelCaixa()" title="Atualizar números e extrato (nuvem + tela)">🔄 Sincronizar Painel</button>
                     <button class="btn-info btn-sm" onclick="fechamentoCaixaDia()">📅 Fechamento do Dia</button>
-                    <button class="btn-danger btn-sm" onclick="corrigirSplitsVendasPagas()" title="Corrige lançamentos antigos que colocaram o total inteiro no MP">🔧 Corrigir splits antigos</button>
+                    <button class="btn-danger btn-sm" onclick="corrigirSplitsVendasPagas()" title="Só use se os splits das caixas estiverem errados">🔧 Corrigir splits antigos</button>
                 </div>
                 <div class="card" id="painelFechamentoDia" style="display:none;margin-top:12px;background:var(--panel-dark)">
                     <h2 style="font-size:14px">Fechamento do Caixa — Hoje</h2>
@@ -1244,7 +1244,84 @@ function migrarContasLegadas(data) {
     if (!data.documentos) data.documentos = {};
     if (!data.motores) data.motores = {};
     if (!data.empresa) data.empresa = { nome: 'FH MOTORES' };
+    if (!data._meta || typeof data._meta !== 'object') data._meta = { versao: 1 };
+    // Áudio Halana 03-08-03: Luis #1002 — preços + Invest. 51,69 (silencioso, sem relançar sozinho)
+    corrigirDocLuis1002NoStore(data);
+    corrigirExtratoLuis1002InvestSilent(data);
     return data;
+}
+
+const LUIS_1002_ID = '-Oyke-K4nyU_29FK_ij6';
+
+function acharDocLuis1002(data) {
+    if (!data || !data.documentos) return null;
+    if (data.documentos[LUIS_1002_ID]) return data.documentos[LUIS_1002_ID];
+    const key = Object.keys(data.documentos).find(k => {
+        const d = data.documentos[k];
+        return d && Number(d.numero) === 1002 && /luis\s*vila\s*guay/i.test(d.clienteNome || '');
+    });
+    return key ? data.documentos[key] : null;
+}
+
+/** Ajusta cobrado dos rolamentos da venda Luis #1002 (32+32→36+36) para lucro 40 + capacitor 11,69 = 51,69. */
+function corrigirDocLuis1002NoStore(data) {
+    const doc = acharDocLuis1002(data);
+    if (!doc || !Array.isArray(doc.itens)) return false;
+    let mudou = false;
+    doc.itens = doc.itens.map(it => {
+        const nome = String(it.nome || '').toLowerCase();
+        const cobrado = Number(it.total != null ? it.total : it.valor) || 0;
+        const custo = Number(it.totalPago != null ? it.totalPago : it.valorPago) || 0;
+        // Dois rolamentos estavam a R$ 32 (lucro 16 cada = 32); caderno Halana: lucro rolamento = 40 → cobrado 36 cada
+        if (nome.includes('rolamento') && Math.abs(cobrado - 32) < 0.01 && Math.abs(custo - 16) < 0.01) {
+            mudou = true;
+            return Object.assign({}, it, {
+                total: 36, valor: 36, valorOriginal: 36, margemOriginal: 125
+            });
+        }
+        return it;
+    });
+    if (!mudou) return false;
+    const somaItens = doc.itens.reduce((s, it) => s + (Number(it.total != null ? it.total : it.valor) || 0), 0);
+    const descR = Number(doc.descontoReais) || 0;
+    const descP = Number(doc.descontoPerc) || 0;
+    doc.total = Math.max(0, Math.round((somaItens - descR - (somaItens * descP / 100)) * 100) / 100);
+    if (!data._meta) data._meta = {};
+    data._meta.corrigiuLuis1002precos = true;
+    return true;
+}
+
+/** Corrige só o valor do extrato (43,69→51,69) sem apagar/relançar — evita painel piscando. */
+function corrigirExtratoLuis1002InvestSilent(data) {
+    if (!data || !data.contas) return false;
+    let mudou = false;
+    const ehLuis = (e) => e && (e.docId === LUIS_1002_ID ||
+        (e.origem === 'venda' && String(e.descricao || '').includes('#1002') && /luis/i.test(e.descricao || '')));
+    const contas = ['mercadopago', 'picpayempresas', 'nubank', 'nubank_invest'];
+    contas.forEach(conta => {
+        const extrato = data.contas[conta] && data.contas[conta].extrato;
+        if (!extrato || typeof extrato !== 'object') return;
+        Object.keys(extrato).forEach(k => {
+            const e = extrato[k];
+            if (!ehLuis(e)) return;
+            if (Math.abs(Number(e.splitLucro) - 43.69) < 0.05) {
+                e.splitLucro = 51.69;
+                e.splitPecas = 102;
+                mudou = true;
+            }
+            if (conta === 'nubank_invest' && Math.abs(Number(e.valor) - 43.69) < 0.05) {
+                e.valor = 51.69;
+                e.categoria = 'LUCRO';
+                e.descricao = 'Venda #1002 — LUIS VILA GUAY (lucro rolamento R$ 40,00 + capacitor R$ 11,69 = R$ 51,69)';
+                mudou = true;
+            }
+        });
+    });
+    if (mudou) {
+        if (!data._meta) data._meta = {};
+        data._meta.corrigiuLuis1002caixas = true;
+    }
+    return mudou;
 }
 
 function contarRegistros(data) {
@@ -1569,9 +1646,17 @@ function aplicarStoreDaNuvem(dados) {
         if (!merged._meta) merged._meta = {};
         merged._meta.origem = 'firebase';
         merged._meta.salvoEm = new Date().toLocaleString('pt-BR');
+        merged._meta.precisaRelancarLuis1002 = false;
+        // Evita re-render se o conteúdo relevante não mudou (painel “louco”)
+        const antes = JSON.stringify({
+            d: store && store.documentos, c: store && store.contas, p: store && store.produtos
+        });
+        const depois = JSON.stringify({
+            d: merged.documentos, c: merged.contas, p: merged.produtos
+        });
         store = merged;
         saveStore();
-        refreshFromStore();
+        if (antes !== depois) refreshFromStore();
         atualizarStatusPersistencia(true, 'nuvem');
     } finally {
         _fbAplicandoNuvem = false;
@@ -2055,6 +2140,10 @@ function refreshFromStore(fromDisk) {
         info.textContent = 'Agora no sistema: ' + ct.clientes + ' cliente(s), ' + ct.produtos + ' produto(s), ' +
             ct.documentos + ' orçamento(s)/venda(s), ' + ct.servicos + ' serviço(s) na tabela. ' +
             (store._meta && store._meta.salvoEm ? 'Último salvamento: ' + store._meta.salvoEm + '.' : '');
+    }
+    // limpa flag antiga que causava loop de relançamento / painel piscando
+    if (store._meta && store._meta.precisaRelancarLuis1002) {
+        store._meta.precisaRelancarLuis1002 = false;
     }
 }
 
@@ -2855,10 +2944,20 @@ function renderCarrinhoVenda() {
     } else {
         const mats = [], servs = [];
         carrinhoVenda.forEach((item, idx) => {
-            const row = `<div class="cart-item"><span>${item.nome}</span><span>${fmt(item.valor)}
+            const ehServ = (item.categoriaOS || '') === 'servico' || itemEhServicoDoc(item);
+            let lucroHint = '';
+            if (!ehServ) {
+                const { custo, lucro } = valoresLinhaSplitItem({
+                    ...item, total: item.valor, qtd: item.qtdBaixa || item.qtd || 1, qtdBaixa: item.qtdBaixa || item.qtd || 1
+                });
+                if (custo > 0 || lucro > 0) {
+                    lucroHint = `<br><small style="color:#2ecc71">custo ${fmt(custo)} · lucro ${fmt(lucro)}</small>`;
+                }
+            }
+            const row = `<div class="cart-item"><span>${item.nome}${lucroHint}</span><span>${fmt(item.valor)}
                 <button class="btn-acao" onclick="editarItemCarrinhoVenda(${idx})">✏️</button>
                 <button class="btn-acao" onclick="removerItemCarrinhoVenda(${idx})">🗑️</button></span></div>`;
-            if ((item.categoriaOS || '') === 'servico') servs.push(row); else mats.push(row);
+            if (ehServ) servs.push(row); else mats.push(row);
         });
         let html = '';
         if (servs.length) html += `<div style="font-weight:bold;color:var(--gold);margin:8px 0 4px">REBOBINAMENTO / MÃO DE OBRA</div>` + servs.join('');
@@ -3122,7 +3221,11 @@ function renderCarrinhoOrc() {
         total += it.total || 0;
         totalPago += it.totalPago || ((it.valorPago || it.custoOriginal || 0) * (it.qtd || 1));
         const ehServ = it.tipo === 'servico';
-        const extra = ehServ ? '' : ` <small style="color:#95a5a6">(pago ${fmt(it.valorPago || it.custoOriginal || 0)})</small>`;
+        let extra = '';
+        if (!ehServ) {
+            const { custo, lucro } = valoresLinhaSplitItem(it);
+            extra = ` <small style="color:#95a5a6">(pago ${fmt(custo)} · <span style="color:#2ecc71">lucro ${fmt(lucro)}</span>)</small>`;
+        }
         const row = `<div class="cart-item"><span>${ehServ ? '' : (it.qtd + 'x ')}${it.nome}${extra} — <strong>${fmt(it.total)}</strong></span>
         <button class="btn-acao" onclick="removerItemOrc(${i})">🗑️</button></div>`;
         if (ehServ) servs.push(row); else pecas.push(row);
@@ -4546,8 +4649,10 @@ window.excluirBoletoForn = async function(id) {
     await dbRemove('boletosFornecedor/' + id);
 };
 
-// Corrige lançamentos antigos que colocaram o TOTAL da venda no Mercado Pago
+// Corrige lançamentos antigos (só quando o usuário clicar — não roda sozinho)
 window.corrigirSplitsVendasPagas = async function() {
+    corrigirDocLuis1002NoStore(store);
+    corrigirExtratoLuis1002InvestSilent(store);
     const vendas = documentos.filter(d => d.tipo === 'VENDA' && d.statusPagamento === 'PAGO');
     if (!vendas.length) return Swal.fire('Info', 'Nenhuma venda paga encontrada.', 'info');
     const r = await Swal.fire({
@@ -4560,6 +4665,7 @@ window.corrigirSplitsVendasPagas = async function() {
     });
     if (!r.isConfirmed) return;
     try {
+        window.__bloqueiaSyncNuvem = true;
         let n = 0;
         for (const d of vendas) {
             for (const conta of ['mercadopago', 'picpayempresas', 'nubank', 'nubank_invest']) {
@@ -4571,10 +4677,21 @@ window.corrigirSplitsVendasPagas = async function() {
             await lancarVendaNasCaixas({ ...d, id: d.id }, d.tipoVenda || 'COMPLETA');
             n++;
         }
+        if (store._meta) {
+            store._meta.precisaRelancarLuis1002 = false;
+            store._meta.corrigiuLuis1002caixas = true;
+        }
+        saveStore();
+        if (window.__fb && window.__fbReady) {
+            try { await enviarStoreParaNuvem({ forcar: true }); } catch (e) { console.warn(e); }
+        }
+        refreshFromStore(false);
         renderExtratoCaixa(); atualizarDashCaixa(); renderPessoal();
         Swal.fire({ icon: 'success', title: 'Pronto!', text: n + ' venda(s) corrigida(s).', timer: 2500, showConfirmButton: false });
     } catch (e) {
         Swal.fire('Erro', e.message, 'error');
+    } finally {
+        window.__bloqueiaSyncNuvem = false;
     }
 };
 
