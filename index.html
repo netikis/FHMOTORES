@@ -763,7 +763,11 @@
                 </div>
                 <div class="toolbar"><input class="search" id="buscaVenda" placeholder="Buscar venda paga..." oninput="renderVendas()"></div>
                 <div style="overflow-x:auto">
-                    <table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Motor / Serviço</th><th>Total</th><th>Pgto</th><th>Caixas</th><th>Ações</th></tr></thead>
+                    <table><thead><tr>
+                        <th>Nº</th>
+                        <th id="thVendaData" style="cursor:pointer;user-select:none" onclick="ordenarVendasPorData()" title="Clique para ordenar por data">Data ⇅</th>
+                        <th>Cliente</th><th>Motor / Serviço</th><th>Total</th><th>Pgto</th><th>Caixas</th><th>Ações</th>
+                    </tr></thead>
                     <tbody id="tbVendas"></tbody></table>
                 </div>
             </div>
@@ -1053,6 +1057,9 @@ window.abrirSecao = function(id, btn) {
     var sec = document.getElementById(id);
     if (sec) sec.classList.add('active');
     if (btn) btn.classList.add('active');
+    if (id === 'secLancarVenda' && typeof window.atualizarCampoNumeroVenda === 'function') {
+        window.atualizarCampoNumeroVenda();
+    }
     var grupos = [
         { secs: ['secOrcamentos', 'secOrcamentosAberto', 'secLancarVenda', 'secVendas'], grupo: 'menuGrupoVendas', toggle: 'btnMenuVendas' },
         { secs: ['secContasReceber'], grupo: 'menuGrupoReceber', toggle: 'btnMenuReceber' },
@@ -2134,6 +2141,7 @@ function refreshFromStore(fromDisk) {
     atualizarDatalists();
     atualizarSelectServicosOrc();
     atualizarStatusPersistencia(true);
+    if (typeof window.atualizarCampoNumeroVenda === 'function') window.atualizarCampoNumeroVenda();
     const info = document.getElementById('infoPersistencia');
     if (info) {
         const ct = contarRegistros(store);
@@ -2614,9 +2622,32 @@ window.unidadeEfetivaVenda = function(p, selEl) {
 };
 
 async function gerarNumVenda() {
-    const nums = documentos.map(d => parseInt(d.numero) || 0);
-    return (nums.length ? Math.max(...nums) : 1000) + 1;
+    // Série do balcão (Lançar Venda): 1001, 1002, ... — ignora orçamentos e notas 001-2026
+    let max = 1000;
+    const lista = (typeof documentos !== 'undefined' && documentos.length)
+        ? documentos
+        : objToList((store && store.documentos) || {});
+    lista.forEach(d => {
+        if (d.tipo && d.tipo !== 'VENDA') return;
+        const candidatos = [d.numero, d.numeroFmt];
+        candidatos.forEach(v => {
+            if (v == null || v === '') return;
+            const s = String(v).trim();
+            // só números puros da série >= 1000 (ex.: 1004). Ignora "001-2026"
+            if (!/^\d+$/.test(s)) return;
+            const n = parseInt(s, 10);
+            if (!isNaN(n) && n >= 1000 && n > max) max = n;
+        });
+    });
+    return max + 1;
 }
+
+window.atualizarCampoNumeroVenda = async function() {
+    if (editandoVendaId) return; // não troca número de venda em edição
+    const el = document.getElementById('vendaNumero');
+    if (!el) return;
+    el.value = await gerarNumVenda();
+};
 
 function itensDocParaCarrinhoVenda(itens) {
     return (itens || []).map(it => {
@@ -3592,6 +3623,27 @@ function renderOrcamentos() {
 }
 window.renderOrcamentos = renderOrcamentos;
 
+window.ordemVendasData = { dir: 'desc' }; // mais recente primeiro por padrão
+
+function dataVendaSortKey(d) {
+    const raw = d.dataConversao || d.data || d.dataStr || '';
+    const s = String(raw).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+        const p = s.split('/');
+        return p[2] + '-' + p[1] + '-' + p[0];
+    }
+    if (d.timestamp) {
+        try { return new Date(d.timestamp).toISOString().slice(0, 10); } catch (e) { return ''; }
+    }
+    return '';
+}
+
+window.ordenarVendasPorData = function() {
+    window.ordemVendasData.dir = window.ordemVendasData.dir === 'asc' ? 'desc' : 'asc';
+    renderVendas();
+};
+
 function renderVendas() {
     const busca = (document.getElementById('buscaVenda').value||'').toLowerCase();
     const tb = document.getElementById('tbVendas'); tb.innerHTML = '';
@@ -3601,7 +3653,20 @@ function renderVendas() {
     const elTot = document.getElementById('dashVendasTotal'); if (elTot) elTot.textContent = fmt(tot);
     const elQtd = document.getElementById('dashVendasPagasQtd'); if (elQtd) elQtd.textContent = String(vendas.length);
 
-    const lista = vendas.filter(d => !busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numeroFmt||d.numero).includes(busca) || (d.motor||'').toLowerCase().includes(busca));
+    const thData = document.getElementById('thVendaData');
+    if (thData) {
+        thData.textContent = window.ordemVendasData.dir === 'asc' ? 'Data ↑' : 'Data ↓';
+    }
+
+    let lista = vendas.filter(d => !busca || (d.clienteNome||'').toLowerCase().includes(busca) || String(d.numeroFmt||d.numero).includes(busca) || (d.motor||'').toLowerCase().includes(busca));
+    const dir = window.ordemVendasData.dir === 'asc' ? 1 : -1;
+    lista = lista.slice().sort((a, b) => {
+        const da = dataVendaSortKey(a);
+        const db = dataVendaSortKey(b);
+        if (da < db) return -1 * dir;
+        if (da > db) return 1 * dir;
+        return ((b.timestamp || 0) - (a.timestamp || 0)) * dir;
+    });
     if (!lista.length) {
         tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#95a5a6;padding:18px">Nenhuma venda paga. Pendentes ficam em Contas a Receber.</td></tr>';
         return;
@@ -3609,8 +3674,9 @@ function renderVendas() {
     lista.forEach(d => {
         const st = '<span class="badge badge-pago">PAGO</span>';
         const cx = rotuloCaixaVenda(d.tipoVenda);
+        const dataBr = formatarDataBr(d.dataConversao || d.data || '') || '-';
         tb.innerHTML += `<tr>
-            <td>${d.numeroFmt||d.numero}</td><td>${d.dataConversao||d.data||'-'}</td><td>${d.clienteNome}</td>
+            <td>${d.numeroFmt||d.numero}</td><td>${dataBr}</td><td>${d.clienteNome}</td>
             <td>${descMotorDoc(d)}</td><td>${fmt(d.total)}</td><td>${st}</td><td>${cx}</td>
             <td class="celula-acoes"><div class="acoes-flex">${montarAcoesVendaHtml(d)}</div></td></tr>`;
     });
@@ -5052,6 +5118,13 @@ gerarNumVenda().then(n => { document.getElementById('vendaNumero').value = n; })
         ];
         for (const s of base) await dbPush('servicos', s);
     }
+
+    // Depois que os dados carregaram, atualiza Nº venda / orçamento (evita ficar preso em 1001)
+    try {
+        if (typeof window.atualizarCampoNumeroVenda === 'function') await window.atualizarCampoNumeroVenda();
+        const orcEl = document.getElementById('orcNumero');
+        if (orcEl && !editandoOrcId) orcEl.value = await gerarNumOrc();
+    } catch (e) { console.warn(e); }
 })();
 setInterval(monitorarVencimentosDocumentos, 60000);
 
