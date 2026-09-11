@@ -32,10 +32,10 @@ backup-para-restaurar.json
 # Arquivos de trabalho que não fazem parte do sistema
 Captura de tela*.png
 _preview_orc.png
+LOGO EMPRESA.jpg
 LOGO VETOR.pdf
 orcamento_ref.pdf
 *.pdf
-!LOGO EMPRESA.jpg
 
 # SO / editor
 .DS_Store
