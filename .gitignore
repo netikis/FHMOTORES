@@ -16,12 +16,26 @@ dist/
 npm-debug.log*
 
 # Credenciais / backups locais
-FIREBASE/firebase-chave.js
+FIREBASE/
 FIREBASE CHAVE KEY.txt
 chave api/
 *.backup.html
 backup/
+_recovery/
 _audio_work/
+VIDEO E AUDIOS HALANA/
+backup-embutido.js
+RESTAURAR-DADOS.html
+backup-fh-motores-*.json
+backup-para-restaurar.json
+
+# Arquivos de trabalho que não fazem parte do sistema
+Captura de tela*.png
+_preview_orc.png
+LOGO VETOR.pdf
+orcamento_ref.pdf
+*.pdf
+!LOGO EMPRESA.jpg
 
 # SO / editor
 .DS_Store
