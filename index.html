@@ -2,10 +2,20 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
     <title>FH MOTORES — Gestão de Oficina</title>
     <meta name="description" content="Sistema de gestão FH MOTORES — clientes, produtos, orçamentos, vendas e controle financeiro.">
     <meta name="theme-color" content="#1a2a43">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FH Motores">
+    <meta name="application-name" content="FH Motores">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -24,18 +34,44 @@
             --info: #3498db;
         }
         * { box-sizing: border-box; }
+        html { height: 100%; }
         body {
             margin: 0; padding: 0; font-family: 'Poppins', sans-serif;
-            background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+            background: var(--bg); color: var(--text);
+            height: 100%; height: 100dvh; overflow: hidden;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .topbar {
             background: linear-gradient(90deg, #0f1929, var(--dark-navy), #0f1929);
             padding: 10px 18px; border-bottom: 2px solid var(--gold);
-            display: flex; align-items: center; justify-content: center; gap: 10px;
+            display: flex; align-items: center; justify-content: flex-start; gap: 10px;
             font-size: 13px; position: sticky; top: 0; z-index: 100;
+            min-height: 48px;
         }
         .topbar strong { color: var(--gold); font-size: 15px; letter-spacing: 1px; }
-        .app-body { display: flex; height: calc(100vh - 46px); }
+        .btn-menu-toggle {
+            display: none; background: rgba(212,160,23,.15); color: var(--gold);
+            border: 1px solid rgba(212,160,23,.45); border-radius: 8px;
+            width: 42px; height: 42px; min-width: 42px; padding: 0; font-size: 20px;
+            align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .btn-instalar-app {
+            display: none; margin-left: 6px; background: var(--gold); color: var(--dark-navy);
+            border: none; border-radius: 8px; padding: 7px 12px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; white-space: nowrap; cursor: pointer;
+        }
+        .btn-instalar-app.show { display: inline-flex; align-items: center; gap: 4px; }
+        .sidebar-backdrop {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+            z-index: 90; border: none; padding: 0; margin: 0; cursor: pointer;
+        }
+        .sidebar-backdrop.open { display: block; }
+        .app-body { display: flex; height: calc(100vh - 46px); height: calc(100dvh - 46px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
         .sidebar {
             width: 260px; min-width: 260px; background: var(--sidebar);
             border-right: 2px solid rgba(212,160,23,.25); overflow-y: auto;
@@ -118,6 +154,56 @@
             .layout-duplo { grid-template-columns: 1fr; }
             .layout-duplo > .card:last-child { position: static; }
         }
+        @media (max-width: 900px) {
+            .btn-menu-toggle { display: inline-flex; }
+            .topbar { justify-content: flex-start; flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+            .topbar .topbar-titulo { flex: 1; min-width: 0; }
+            .topbar .topbar-titulo span:not(#statusFirebase):not(#userEmailTop) { display: none; }
+            #statusFirebase { margin-left: 0 !important; font-size: 10px; width: 100%; order: 5; }
+            #userEmailTop { display: none; }
+            .sidebar {
+                position: fixed; left: 0; top: 0; bottom: 0; width: min(300px, 86vw); min-width: 0;
+                z-index: 95; transform: translateX(-105%); transition: transform .28s ease;
+                padding-top: calc(12px + env(safe-area-inset-top));
+                box-shadow: 8px 0 24px rgba(0,0,0,.35);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-logo h1, .menu-btn span.txt, .menu-grupo-titulo, .menu-seta { display: initial; }
+            .menu-btn { text-align: left; padding: 12px 12px; font-size: 12px; min-height: 44px; }
+            .menu-btn.menu-sub { padding-left: 28px; }
+            .main { padding: 12px 10px; width: 100%; }
+            .card { padding: 14px 12px; border-radius: 12px; }
+            .col { min-width: min(100%, 160px); }
+            .col-btn { flex: 1 1 100%; max-width: none; min-width: 0; }
+            .search { max-width: none; min-width: 0; width: 100%; }
+            table { font-size: 11px; }
+            th, td { padding: 8px 6px; }
+            td.celula-acoes { min-width: 280px; }
+            .acoes-flex { max-width: 100%; }
+            .dash-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .dash-card .valor { font-size: 16px; }
+            .modal { padding: 12px; align-items: flex-end; }
+            .modal-box { max-width: 100%; border-radius: 14px 14px 0 0; max-height: 90dvh; overflow-y: auto; }
+            #alerta-stack-global { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); align-items: stretch; }
+            #telaLogin > div { max-width: 100%; }
+            input, select, textarea, button { font-size: 16px; } /* evita zoom iOS */
+            button { font-size: 13px; min-height: 44px; }
+            .btn-sm { min-height: 36px; font-size: 12px; }
+            .btn-acao { min-height: 36px; padding: 8px 10px; }
+        }
+        @media (max-width: 480px) {
+            .dash-grid { grid-template-columns: 1fr 1fr; }
+            .tabs-caixa { gap: 6px; }
+            .tab-caixa { padding: 10px 12px; flex: 1 1 calc(50% - 6px); text-align: center; }
+            .cart-total { font-size: 18px; }
+            .topbar strong { font-size: 13px; }
+        }
+        @media (min-width: 901px) and (max-width: 1100px) {
+            .sidebar { width: 220px; min-width: 200px; }
+        }
+        @media (display-mode: standalone), (display-mode: fullscreen) {
+            .btn-instalar-app { display: none !important; }
+        }
         button {
             padding: 9px 14px; border: none; border-radius: 6px; font-weight: 700;
             cursor: pointer; font-family: inherit; font-size: 12px; text-transform: uppercase; transition: .2s;
@@ -160,6 +246,8 @@
         .badge-venda { background: var(--success); color: #fff; }
         .badge-pend { background: #e74c3c; color: #fff; }
         .badge-pago { background: var(--success); color: #fff; }
+        .badge-parcial { background: #2980b9; color: #fff; }
+        .valor-saldo-pendente { font-weight: 800; color: #f1c40f; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
         .modal.open { display: flex; }
         .modal-box { background: var(--panel); border-radius: 12px; padding: 20px; max-width: 480px; width: 100%; border: 2px solid var(--gold); }
@@ -205,12 +293,6 @@
         #alerta-container-docs .card-alerta-venc { background: #fff; width: 100%; box-sizing: border-box; border-radius: 10px; border: 1px solid #eee; box-shadow: 0 4px 14px rgba(0,0,0,.06); margin-bottom: 10px; padding: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; transition: opacity .4s, transform .4s; }
         #alerta-container-docs .alerta-btn-fechar { background: #d9534f; color: #fff; border: none; border-radius: 6px; padding: 5px 8px; font-weight: 700; font-size: 10px; cursor: pointer; }
         #alerta-container-docs .alerta-btn-minimizar { background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 5px 10px; font-weight: 700; font-size: 14px; cursor: pointer; }
-        @media (max-width: 768px) {
-            .sidebar { width: 56px; min-width: 56px; padding: 8px 4px; }
-            .sidebar-logo h1, .menu-btn span.txt, .menu-grupo-titulo, .menu-seta { display: none; }
-            .menu-btn.menu-sub { padding-left: 10px; }
-            .menu-btn { text-align: center; padding: 10px 4px; font-size: 18px; }
-        }
     </style>
 </head>
 <body>
@@ -231,16 +313,22 @@
 </div>
 
 <div class="topbar">
-    <span>⚙️</span>
-    <strong>FH MOTORES</strong>
-    <span>— Gestão de Oficina</span>
+    <button type="button" class="btn-menu-toggle" id="btnMenuToggle" onclick="toggleMenuMobile()" aria-label="Abrir menu">☰</button>
+    <div class="topbar-titulo" style="display:flex;align-items:center;gap:8px;min-width:0">
+        <span>⚙️</span>
+        <strong>FH MOTORES</strong>
+        <span>— Gestão de Oficina</span>
+    </div>
+    <button type="button" class="btn-instalar-app" id="btnInstalarApp" onclick="instalarAppFH()">⬇ Instalar App</button>
     <span id="statusFirebase" class="status-online" style="margin-left:auto;">● Modo Local</span>
     <span id="userEmailTop" style="font-size:11px;color:#bdc3c7;margin-left:10px"></span>
     <button type="button" id="btnLogout" class="btn-sm btn-danger" style="display:none;margin-left:8px" onclick="sairFHMotores()">Sair</button>
 </div>
 
+<button type="button" class="sidebar-backdrop" id="sidebarBackdrop" onclick="fecharMenuMobile()" aria-label="Fechar menu"></button>
+
 <div class="app-body">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebarMenu">
         <div class="sidebar-logo">
             <img id="logoEmpresa" src="https://www.image2url.com/r2/default/files/1777991879754-324ae06d-dd51-42bd-9f5b-f242d4babc74.jpeg" alt="FH Motores">
             <h1>FH Motores</h1>
@@ -778,10 +866,11 @@
             <div class="card">
                 <h2>⏳ Contas a Receber — Pendentes</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    Vendas marcadas como <strong style="color:#f1c40f">PENDENTE</strong>. Ao receber, use <strong>💰 Receber</strong> — o valor entra nas caixas pela regra do caderno.
+                    Vendas marcadas como <strong style="color:#f1c40f">PENDENTE</strong>. Em <strong>💰 Receber</strong> dá para pagar o total ou um <strong>valor parcial</strong> (o cliente pode pagar um pouco agora e o resto no mês que vem). O saldo fica aqui até quitar.
                 </p>
                 <div class="dash-grid">
-                    <div class="dash-card"><div class="lbl">Total a Receber</div><div class="valor" id="dashReceberTotal" style="color:#f1c40f">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl">Saldo a Receber</div><div class="valor" id="dashReceberTotal" style="color:#f1c40f">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl">Já recebido (parcial)</div><div class="valor" id="dashReceberParcial" style="color:#2ecc71">R$ 0</div></div>
                     <div class="dash-card"><div class="lbl">Qtd. Pendentes</div><div class="valor" id="dashReceberQtd" style="color:#f1c40f">0</div></div>
                     <div class="dash-card"><div class="lbl">Vencidas / sem data</div><div class="valor" id="dashReceberVencidas" style="color:#e74c3c">0</div></div>
                 </div>
@@ -798,7 +887,7 @@
                                 <th>Vencimento</th>
                                 <th>Cliente</th>
                                 <th>Motor / Serviço</th>
-                                <th>Total</th>
+                                <th>Valor / Saldo</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -964,6 +1053,13 @@
                 </form>
             </div>
             <div class="card">
+                <h2>📱 App no celular (Android / iPhone)</h2>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">
+                    Abra o site no celular (GitHub Pages) e use <b>⬇ Instalar App</b> no topo — o ícone FH Motores fica na tela inicial como aplicativo.
+                </p>
+                <button type="button" class="btn-gold" onclick="instalarAppFH()">⬇ Como instalar / Instalar App</button>
+            </div>
+            <div class="card">
                 <h2>☁ Sincronização + Segurança (Firebase)</h2>
                 <div class="toolbar" style="flex-wrap:wrap;gap:8px">
                     <button type="button" class="btn-success" onclick="enviarTudoParaFirebase()">☁ Enviar este PC → nuvem</button>
@@ -1047,6 +1143,31 @@
     </div>
 </div>
 
+<div class="modal" id="modalReceberPendente">
+    <div class="modal-box">
+        <span class="close-modal" onclick="fecharModalReceberPendente()">&times;</span>
+        <h3 style="color:#27ae60">💰 Confirmar recebimento</h3>
+        <p id="receberPendenteResumo" style="font-size:14px;margin:0 0 6px"></p>
+        <p id="receberPendenteSaldoInfo" style="font-size:12px;color:#f1c40f;margin:0 0 10px"></p>
+        <p style="font-size:12px;color:var(--muted);margin-top:0">
+            Escolha o valor e a forma. Pode receber o total ou um <strong>pagamento parcial</strong> — o restante continua em Contas a Receber.
+        </p>
+        <label>Valor deste recebimento (R$)</label>
+        <input type="number" id="receberValorParcial" step="0.01" min="0.01" placeholder="0,00">
+        <label>Forma de pagamento</label>
+        <select id="receberFormaPgto">
+            <option value="Dinheiro">💵 Dinheiro</option>
+            <option value="PIX">PIX</option>
+            <option value="Cartão de Débito">💳 Cartão de Débito</option>
+            <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+            <option value="Boleto">Boleto</option>
+            <option value="Mercado Pago">Mercado Pago</option>
+        </select>
+        <button type="button" class="btn-success" style="width:100%;margin-top:14px;padding:12px" onclick="confirmarRecebimentoPendente()">💰 Confirmar recebimento</button>
+        <button type="button" class="btn-info" style="width:100%;margin-top:8px;padding:10px" onclick="fecharModalReceberPendente()">Cancelar</button>
+    </div>
+</div>
+
 <script>
 window.abrirSecao = function(id, btn) {
     document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
@@ -1060,6 +1181,7 @@ window.abrirSecao = function(id, btn) {
     if (id === 'secLancarVenda' && typeof window.atualizarCampoNumeroVenda === 'function') {
         window.atualizarCampoNumeroVenda();
     }
+    if (typeof window.fecharMenuMobile === 'function') window.fecharMenuMobile();
     var grupos = [
         { secs: ['secOrcamentos', 'secOrcamentosAberto', 'secLancarVenda', 'secVendas'], grupo: 'menuGrupoVendas', toggle: 'btnMenuVendas' },
         { secs: ['secContasReceber'], grupo: 'menuGrupoReceber', toggle: 'btnMenuReceber' },
@@ -3156,6 +3278,25 @@ window.finalizarVenda = async function() {
             tipoVenda: tipoCaixa, timestamp: Date.now(), dataStr: agora()
         };
         if (tipoDoc === 'VENDA') doc.dataConversao = doc.data;
+        if (oldDoc && oldDoc.recebimentosParciais) {
+            doc.recebimentosParciais = oldDoc.recebimentosParciais;
+            if (oldDoc.dataRecebimento) doc.dataRecebimento = oldDoc.dataRecebimento;
+            if (oldDoc.dataRecebimentoStr) doc.dataRecebimentoStr = oldDoc.dataRecebimentoStr;
+            if (oldDoc.timestampRecebimento) doc.timestampRecebimento = oldDoc.timestampRecebimento;
+        }
+        const recebidoAntesSave = oldDoc ? window._totalRecebidoDoc(oldDoc) : 0;
+        if (tipoDoc === 'VENDA' && status === 'PAGO' && recebidoAntesSave > 0.009) {
+            const restanteSave = Math.max(0, total - recebidoAntesSave);
+            if (restanteSave > 0.009) {
+                const histSave = window._listaRecebimentosParciais(doc).slice();
+                histSave.push({ valor: restanteSave, formaPagamento: formaPgto, dataStr: agora(), timestamp: Date.now() });
+                doc.recebimentosParciais = histSave;
+            }
+            doc.valorRecebidoParcial = window._totalRecebidoDoc(Object.assign({}, doc, { statusPagamento: 'PENDENTE' }));
+            if (restanteSave > 0.009) doc.valorRecebidoParcial = recebidoAntesSave + restanteSave;
+            doc.saldoDevedor = Math.max(0, total - (doc.valorRecebidoParcial || 0));
+            doc.dataRecebimento = hoje();
+        }
 
         let docId = editandoVendaId;
         if (editandoVendaId) {
@@ -3168,7 +3309,14 @@ window.finalizarVenda = async function() {
         }
 
         if (tipoDoc === 'VENDA' && status === 'PAGO' && (!oldDoc || oldDoc.statusPagamento !== 'PAGO')) {
-            await lancarVendaNasCaixas({ ...doc, id: docId }, tipoCaixa);
+            const restanteCx = Math.max(0, total - recebidoAntesSave);
+            if (restanteCx > 0.009) {
+                await lancarVendaNasCaixas({ ...doc, id: docId }, tipoCaixa, {
+                    valorLote: restanteCx,
+                    recebidoAntes: recebidoAntesSave,
+                    quitado: true
+                });
+            }
         }
 
         const titulo = tipoDoc === 'VENDA' ? 'Venda salva!' : 'Orçamento salvo!';
@@ -3472,6 +3620,27 @@ function round2FH(n) {
     return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+window._listaRecebimentosParciais = function (doc) {
+    if (!doc || !doc.recebimentosParciais) return [];
+    return Array.isArray(doc.recebimentosParciais) ? doc.recebimentosParciais : Object.values(doc.recebimentosParciais);
+};
+window._totalRecebidoDoc = function (doc) {
+    if (!doc) return 0;
+    const lista = window._listaRecebimentosParciais(doc);
+    if (lista.length) {
+        return lista.reduce(function (s, r) { return s + (parseFloat(r.valor) || 0); }, 0);
+    }
+    if ((doc.statusPagamento || 'PENDENTE') === 'PAGO') return parseFloat(doc.total) || 0;
+    return parseFloat(doc.valorRecebidoParcial) || 0;
+};
+window._saldoDevedorDoc = function (doc) {
+    if (!doc) return 0;
+    return Math.max(0, (parseFloat(doc.total) || 0) - window._totalRecebidoDoc(doc));
+};
+window._docQuitado = function (doc) {
+    return window._saldoDevedorDoc(doc) <= 0.009;
+};
+
 /** Cobrado + custo + lucro de cada linha (rolamento/capacitor/etc.) */
 function valoresLinhaSplitItem(i) {
     const qtd = Number(i && (i.qtdBaixa != null ? i.qtdBaixa : i.qtd)) || 1;
@@ -3555,10 +3724,33 @@ function calcSplitVendaDoc(doc) {
     };
 }
 
-async function lancarVendaNasCaixas(doc, tipoVenda) {
-    const s = calcSplitVendaDoc(doc);
+async function lancarVendaNasCaixas(doc, tipoVenda, opts) {
+    opts = opts || {};
+    const s0 = calcSplitVendaDoc(doc);
+    const totalNota = parseFloat(doc.total) || 0;
+    const valorLote = opts.valorLote != null ? (parseFloat(opts.valorLote) || 0) : totalNota;
+    const recebidoAntes = parseFloat(opts.recebidoAntes) || 0;
+    let ratio = 1;
+    if (totalNota > 0.0001 && (opts.valorLote != null || opts.quitado)) {
+        ratio = opts.quitado ? Math.max(0, 1 - (recebidoAntes / totalNota)) : (valorLote / totalNota);
+    }
+    const scale = function (v) { return round2FH((Number(v) || 0) * ratio); };
+    const s = {
+        totalPecasCobrado: scale(s0.totalPecasCobrado),
+        totalPecasCusto: scale(s0.totalPecasCusto),
+        totalMO: scale(s0.totalMO),
+        lucroPecas: scale(s0.lucroPecas),
+        gastoMP: scale(s0.gastoMP),
+        gastoPicPay: scale(s0.gastoPicPay),
+        custoNubank: scale(s0.custoNubank),
+        moPura: scale(s0.moPura),
+        detalhesLucro: (s0.detalhesLucro || []).map(function (d) {
+            return Object.assign({}, d, { lucro: scale(d.lucro), custo: scale(d.custo), cobrado: scale(d.cobrado) });
+        })
+    };
     const num = doc.numeroFmt || doc.numero;
-    const desc = 'Venda #' + num + ' — ' + (doc.clienteNome || '');
+    const descParc = (ratio < 0.999 && ratio > 0) ? (' (parcial ' + fmt(valorLote) + ')') : '';
+    const desc = 'Venda #' + num + ' — ' + (doc.clienteNome || '') + descParc;
     const lancar = async (conta, valor, descExtra, categoria) => {
         if (!(valor > 0.0001)) return;
         await dbPush('contas/' + conta + '/extrato', {
@@ -3693,14 +3885,17 @@ function renderContasReceber() {
     const buscaEl = document.getElementById('buscaReceber');
     const busca = ((buscaEl && buscaEl.value) || '').toLowerCase();
     const pendentes = documentos.filter(d => d.tipo === 'VENDA' && (d.statusPagamento || '') !== 'PAGO');
-    let tot = 0, vencidas = 0;
+    let tot = 0, totParc = 0, vencidas = 0;
     const hojeStr = hoje();
     pendentes.forEach(d => {
-        tot += parseFloat(d.total) || 0;
+        tot += window._saldoDevedorDoc(d);
+        const rec = window._totalRecebidoDoc(d);
+        if ((d.statusPagamento || '') !== 'PAGO') totParc += rec;
         const venc = vencimentoDocReceber(d);
         if (!venc || venc < hojeStr) vencidas++;
     });
     const elTot = document.getElementById('dashReceberTotal'); if (elTot) elTot.textContent = fmt(tot);
+    const elParc = document.getElementById('dashReceberParcial'); if (elParc) elParc.textContent = fmt(totParc);
     const elQtd = document.getElementById('dashReceberQtd'); if (elQtd) elQtd.textContent = String(pendentes.length);
     const elVenc = document.getElementById('dashReceberVencidas'); if (elVenc) elVenc.textContent = String(vencidas);
     const badge = document.getElementById('badgeQtdReceber');
@@ -3735,13 +3930,23 @@ function renderContasReceber() {
         } else if (venc && venc === hojeStr) {
             vencTxt = venc + ' <span class="badge badge-orc">HOJE</span>';
         }
+        const recebidoLinha = window._totalRecebidoDoc(d);
+        const saldoLinha = window._saldoDevedorDoc(d);
+        const totalNota = parseFloat(d.total) || 0;
+        let colValor = `<span class="valor-saldo-pendente">${fmt(totalNota)}</span>`;
+        if (recebidoLinha > 0 && saldoLinha > 0.009) {
+            colValor = `<span class="badge badge-parcial">RECEBIDO PARCIAL</span>`
+                + `<div style="font-size:10px;color:#bdc3c7;font-weight:600;margin-top:4px">Total: ${fmt(totalNota)}</div>`
+                + `<div class="valor-saldo-pendente">Saldo: ${fmt(saldoLinha)}</div>`
+                + `<div style="font-size:10px;color:#2ecc71;font-weight:700">Recebido: ${fmt(recebidoLinha)}</div>`;
+        }
         tb.innerHTML += `<tr class="linha-pendente">
             <td>${d.numeroFmt || d.numero}</td>
             <td>${d.dataConversao || d.data || '-'}</td>
             <td${vencStyle}>${vencTxt}</td>
             <td>${d.clienteNome || '-'}</td>
             <td>${descMotorDoc(d)}</td>
-            <td style="font-weight:700;color:#f1c40f">${fmt(d.total)}</td>
+            <td>${colValor}</td>
             <td class="celula-acoes"><div class="acoes-flex">${montarAcoesVendaHtml(d)}</div></td>
         </tr>`;
     });
@@ -3768,7 +3973,10 @@ function montarAcoesVendaHtml(d) {
     if (pago) {
         h += `<button type="button" class="btn-acao" style="color:#e74c3c" onclick="estornarPagamento('${id}')" title="Desfazer pagamento">🔄 Estornar</button>`;
     } else {
-        h += `<button type="button" class="btn-acao receber" style="border-color:#27ae60;color:#27ae60" onclick="marcarComoPago('${id}')" title="Registrar pagamento">💰 Receber</button>`;
+        h += `<button type="button" class="btn-acao receber" style="border-color:#27ae60;color:#27ae60" onclick="marcarComoPago('${id}')" title="Registrar pagamento total ou parcial">💰 Receber</button>`;
+        if (window._totalRecebidoDoc(d) > 0) {
+            h += `<button type="button" class="btn-acao" style="color:#e74c3c" onclick="estornarPagamento('${id}')" title="Estornar os recebimentos parciais">🔄 Estornar</button>`;
+        }
     }
     h += `<button type="button" class="btn-acao del" onclick="excluirDoc('${id}')" title="Excluir">🗑️</button>`;
     return h;
@@ -3870,7 +4078,19 @@ window.enviarWhatsVenda = function(id) {
         msg += `- ${nome}: ${fmt(val)}\n`;
     });
     msg += `\n*TOTAL: ${fmt(d.total)}*\n`;
-    msg += `*Status:* ${d.statusPagamento || '-'}${d.formaPagamento ? ' · ' + d.formaPagamento : ''}\n\n`;
+    if (d.tipo === 'VENDA') {
+        const recW = window._totalRecebidoDoc(d);
+        const salW = window._saldoDevedorDoc(d);
+        if ((d.statusPagamento || '') === 'PAGO') {
+            msg += `*Status:* PAGO${d.formaPagamento ? ' · ' + d.formaPagamento : ''}\n\n`;
+        } else if (recW > 0) {
+            msg += `*Já recebido:* ${fmt(recW)}\n*Saldo em aberto:* ${fmt(salW)}\n\n`;
+        } else {
+            msg += `*Status:* PENDENTE${d.formaPagamento ? ' · ' + d.formaPagamento : ''}\n\n`;
+        }
+    } else {
+        msg += `*Status:* ${d.statusPagamento || '-'}${d.formaPagamento ? ' · ' + d.formaPagamento : ''}\n\n`;
+    }
     msg += `Agradecemos a preferência! *${empNome}*`;
     window.open(`https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(msg)}`, '_blank');
 };
@@ -3932,7 +4152,7 @@ window.imprimirCupom = function(id) {
     <div style="text-align:right;font-size:12px">${d.formaPagamento || ''}</div>
     ${htmlTroco}
     <div class="line"></div>
-    <div class="center" style="font-size:11px">PAGAMENTO: ${d.statusPagamento === 'PAGO' ? 'RECEBIDO' : 'PENDENTE'}</div>
+    <div class="center" style="font-size:11px">PAGAMENTO: ${d.statusPagamento === 'PAGO' ? 'RECEBIDO' : (window._totalRecebidoDoc(d) > 0 ? 'PARCIAL — SALDO ' + fmt(window._saldoDevedorDoc(d)) : 'PENDENTE')}</div>
     <div class="center" style="font-size:10px;margin-top:15px;margin-bottom:50px">Obrigado pela preferência!</div>
     <button class="btn-imp" onclick="window.print()">🖨️ Imprimir Cupom</button>
     </body></html>`;
@@ -3941,22 +4161,106 @@ window.imprimirCupom = function(id) {
     w.document.write(html); w.document.close();
 };
 
-window.marcarComoPago = async function(id) {
-    const d = documentos.find(x => x.id === id);
-    if (!d) return;
-    if (d.statusPagamento === 'PAGO') return Swal.fire('Info', 'Esta venda já está paga.', 'info');
-    const r = await Swal.fire({
-        title: 'Receber pagamento?',
-        text: `Cliente: ${d.clienteNome} — Total: ${fmt(d.total)}`,
-        icon: 'question', showCancelButton: true, confirmButtonText: '💰 Confirmar PAGO', cancelButtonText: 'Cancelar'
-    });
-    if (!r.isConfirmed) return;
+window.marcarComoPago = function (id) {
+    window.abrirModalReceberPendente(id);
+};
+
+window.fecharModalReceberPendente = function () {
+    window.fecharModal('modalReceberPendente');
+    window.idDocRecebimentoPendente = null;
+};
+
+window.abrirModalReceberPendente = function (id) {
+    const doc = documentos.find(x => String(x.id) === String(id));
+    if (!doc) return Swal.fire('Atenção', 'Documento não encontrado.', 'warning');
+    if (window._docQuitado(doc)) return Swal.fire('Info', 'Esta nota já está quitada (PAGO).', 'info');
+    window.idDocRecebimentoPendente = doc.id;
+    const totalNota = parseFloat(doc.total) || 0;
+    const recebido = window._totalRecebidoDoc(doc);
+    const saldo = window._saldoDevedorDoc(doc);
+    const res = document.getElementById('receberPendenteResumo');
+    if (res) {
+        res.innerHTML = `<strong>${window._escHtmlNota(doc.clienteNome || '-')}</strong> — Nº <strong>${window._escHtmlNota(String(doc.numeroFmt || doc.numero || '-'))}</strong>`;
+    }
+    const infoSaldo = document.getElementById('receberPendenteSaldoInfo');
+    if (infoSaldo) {
+        let txt = `Valor total: <strong>${fmt(totalNota)}</strong>`;
+        if (recebido > 0) txt += ` &nbsp;|&nbsp; Já recebido: <strong style="color:#2ecc71">${fmt(recebido)}</strong>`;
+        txt += ` &nbsp;|&nbsp; Saldo: <strong style="color:#f1c40f">${fmt(saldo)}</strong>`;
+        infoSaldo.innerHTML = txt;
+    }
+    const inpVal = document.getElementById('receberValorParcial');
+    if (inpVal) {
+        inpVal.value = saldo.toFixed(2);
+        inpVal.max = String(saldo.toFixed(2));
+    }
+    const sel = document.getElementById('receberFormaPgto');
+    if (sel) {
+        sel.value = 'Dinheiro';
+    }
+    const m = document.getElementById('modalReceberPendente');
+    if (m) m.classList.add('open');
+};
+
+window.confirmarRecebimentoPendente = async function () {
+    const id = window.idDocRecebimentoPendente;
+    if (!id) return;
+    const doc = documentos.find(x => String(x.id) === String(id));
+    if (!doc) {
+        window.fecharModalReceberPendente();
+        return;
+    }
+    const saldoAntes = window._saldoDevedorDoc(doc);
+    if (saldoAntes <= 0.009) {
+        window.fecharModalReceberPendente();
+        return Swal.fire('Info', 'Esta nota já está quitada.', 'info');
+    }
+    const inpVal = document.getElementById('receberValorParcial');
+    const valorReceber = inpVal ? (parseFloat(String(inpVal.value).replace(',', '.')) || 0) : saldoAntes;
+    if (valorReceber <= 0) return Swal.fire('Atenção', 'Informe um valor maior que zero para este recebimento.', 'warning');
+    if (valorReceber > saldoAntes + 0.009) {
+        return Swal.fire('Atenção', `O valor informado (${fmt(valorReceber)}) é maior que o saldo (${fmt(saldoAntes)}).`, 'warning');
+    }
+    const sel = document.getElementById('receberFormaPgto');
+    const forma = sel ? sel.value : 'Dinheiro';
     try {
-        await dbUpdate('documentos/' + id, { statusPagamento: 'PAGO', dataRecebimento: hoje(), dataStr: agora() });
-        await lancarVendaNasCaixas({ ...d, id, statusPagamento: 'PAGO' }, d.tipoVenda || 'COMPLETA');
+        const ts = Date.now();
+        const dataRecebimentoStr = new Date(ts).toLocaleString('pt-BR');
+        const historico = window._listaRecebimentosParciais(doc).slice();
+        historico.push({
+            valor: valorReceber,
+            formaPagamento: forma,
+            dataStr: dataRecebimentoStr,
+            timestamp: ts
+        });
+        const totalRecebido = historico.reduce(function (s, r) { return s + (parseFloat(r.valor) || 0); }, 0);
+        const saldoRestante = Math.max(0, (parseFloat(doc.total) || 0) - totalRecebido);
+        const quitado = saldoRestante <= 0.009;
+        const payload = {
+            recebimentosParciais: historico,
+            valorRecebidoParcial: totalRecebido,
+            saldoDevedor: saldoRestante,
+            formaPagamento: forma,
+            statusPagamento: quitado ? 'PAGO' : 'PENDENTE',
+            dataRecebimento: hoje(),
+            dataRecebimentoStr: dataRecebimentoStr,
+            timestampRecebimento: ts
+        };
+        await dbUpdate('documentos/' + id, payload);
+        await lancarVendaNasCaixas(Object.assign({}, doc, payload, { id: id }), doc.tipoVenda || 'COMPLETA', {
+            valorLote: valorReceber,
+            recebidoAntes: totalRecebido - valorReceber,
+            quitado: quitado
+        });
+        window.fecharModalReceberPendente();
         renderVendas();
         if (typeof renderContasReceber === 'function') renderContasReceber();
-        Swal.fire({ icon: 'success', title: 'Recebido!', text: 'Lançado nas caixas conforme a regra.', timer: 2200, showConfirmButton: false });
+        if (typeof renderExtratoCaixa === 'function') renderExtratoCaixa();
+        if (typeof atualizarDashCaixa === 'function') atualizarDashCaixa();
+        const msg = quitado
+            ? 'Nota quitada. Valor lançado nas caixas pela regra do caderno.'
+            : `Pagamento parcial registrado.\nRecebido agora: ${fmt(valorReceber)}\nSaldo restante: ${fmt(saldoRestante)}\nA nota continua em Contas a Receber.`;
+        Swal.fire({ icon: 'success', title: quitado ? 'Quitado!' : 'Parcial recebido!', text: msg });
     } catch (e) {
         Swal.fire('Erro', e.message, 'error');
     }
@@ -3965,10 +4269,16 @@ window.marcarComoPago = async function(id) {
 window.estornarPagamento = async function(id) {
     const d = documentos.find(x => x.id === id);
     if (!d) return;
-    if (d.statusPagamento !== 'PAGO') return Swal.fire('Info', 'Esta venda já está pendente.', 'info');
+    const recebido = window._totalRecebidoDoc(d);
+    if ((d.statusPagamento || 'PAGO') === 'PENDENTE' && recebido <= 0) {
+        return Swal.fire('Info', 'Este documento já está pendente (sem recebimentos).', 'info');
+    }
     const r = await Swal.fire({
         title: 'Estornar pagamento?',
-        html: `Nota Nº <b>${d.numeroFmt || d.numero}</b><br>Cliente: ${d.clienteNome}<br><br>Remove os lançamentos das caixas e volta para <b>Contas a Receber</b>.`,
+        html: `Nota Nº <b>${d.numeroFmt || d.numero}</b><br>Cliente: ${d.clienteNome}<br><br>
+            Desfaz o(s) recebimento(s) desta nota.<br>
+            Valor a estornar: <b>${fmt(recebido)}</b><br><br>
+            Remove os lançamentos das caixas e volta para <b>Contas a Receber</b>.`,
         icon: 'warning', showCancelButton: true, confirmButtonText: '🔄 Estornar', cancelButtonText: 'Cancelar',
         confirmButtonColor: '#e74c3c'
     });
@@ -3984,11 +4294,17 @@ window.estornarPagamento = async function(id) {
         }
         await dbUpdate('documentos/' + id, {
             statusPagamento: 'PENDENTE',
-            dataRecebimento: null
+            dataRecebimento: null,
+            dataRecebimentoStr: null,
+            timestampRecebimento: null,
+            recebimentosParciais: null,
+            valorRecebidoParcial: null,
+            saldoDevedor: null
         });
         renderVendas();
         if (typeof renderContasReceber === 'function') renderContasReceber();
         if (typeof renderExtratoCaixa === 'function') renderExtratoCaixa();
+        if (typeof atualizarDashCaixa === 'function') atualizarDashCaixa();
         if (typeof renderPessoal === 'function') renderPessoal();
         Swal.fire({ icon: 'success', title: 'Estornado!', text: 'Venda voltou para Contas a Receber.', timer: 2200, showConfirmButton: false });
     } catch (e) {
@@ -4018,6 +4334,9 @@ window._fmtMoedaNota = function(v) {
 
 window._htmlPagamentoNotaDoc = function(doc) {
     const total = parseFloat(doc.total) || 0;
+    const recebido = window._totalRecebidoDoc(doc);
+    const saldo = window._saldoDevedorDoc(doc);
+    const parciais = window._listaRecebimentosParciais(doc);
     let html = '<div style="margin-top:12px;padding:10px;border:1px solid #dee2e6;border-radius:6px;background:#f8f9fa;">';
     html += '<div style="font-weight:800;margin-bottom:6px;text-transform:uppercase;font-size:10px;color:#34495e;">Situação do pagamento</div>';
     html += `<div style="margin-bottom:4px;">Valor total da nota: <strong>${window._fmtMoedaNota(total)}</strong></div>`;
@@ -4026,6 +4345,18 @@ window._htmlPagamentoNotaDoc = function(doc) {
     } else if ((doc.statusPagamento || '') === 'PAGO') {
         html += '<div style="margin-top:6px;color:#27ae60;font-weight:bold;">Pagamento: recebido integralmente' +
             (doc.formaPagamento ? ` (${window._escHtmlNota(doc.formaPagamento)})` : '') + '</div>';
+        if (parciais.length > 1) {
+            html += '<div style="margin-top:6px;font-size:10px;color:#555;">Recebimentos:</div>';
+            parciais.forEach(function (p) {
+                html += `<div style="font-size:10px;color:#555;">• ${window._escHtmlNota(p.dataStr || '')} — ${window._fmtMoedaNota(p.valor)} (${window._escHtmlNota(p.formaPagamento || '')})</div>`;
+            });
+        }
+    } else if (recebido > 0) {
+        html += `<div style="margin-top:6px;color:#2980b9;font-weight:bold;">Pagamento parcial: recebido ${window._fmtMoedaNota(recebido)}</div>`;
+        html += `<div style="margin-top:4px;color:#e67e22;font-weight:bold;">Saldo em aberto: ${window._fmtMoedaNota(saldo)}</div>`;
+        parciais.forEach(function (p) {
+            html += `<div style="font-size:10px;color:#555;">• ${window._escHtmlNota(p.dataStr || '')} — ${window._fmtMoedaNota(p.valor)} (${window._escHtmlNota(p.formaPagamento || '')})</div>`;
+        });
     } else {
         html += '<div style="margin-top:6px;color:#f39c12;font-weight:bold;">Pagamento: pendente</div>';
     }
@@ -5148,6 +5479,92 @@ document.getElementById('buscaProd').addEventListener('keydown', function(e) {
 document.getElementById('prodCodigo').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prodQtd').focus(); }
 });
+
+// ==================== PWA / APP CELULAR ====================
+window.toggleMenuMobile = function() {
+    const side = document.getElementById('sidebarMenu');
+    const bd = document.getElementById('sidebarBackdrop');
+    if (!side) return;
+    const open = !side.classList.contains('open');
+    side.classList.toggle('open', open);
+    if (bd) bd.classList.toggle('open', open);
+};
+window.fecharMenuMobile = function() {
+    const side = document.getElementById('sidebarMenu');
+    const bd = document.getElementById('sidebarBackdrop');
+    if (side) side.classList.remove('open');
+    if (bd) bd.classList.remove('open');
+};
+
+let _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    _deferredInstallPrompt = e;
+    const btn = document.getElementById('btnInstalarApp');
+    if (btn) btn.classList.add('show');
+});
+window.addEventListener('appinstalled', function() {
+    _deferredInstallPrompt = null;
+    const btn = document.getElementById('btnInstalarApp');
+    if (btn) btn.classList.remove('show');
+});
+
+window.instalarAppFH = async function() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+
+    if (isStandalone) {
+        return Swal.fire({ icon: 'info', title: 'Já está instalado', text: 'O FH Motores já está rodando como aplicativo.' });
+    }
+    if (_deferredInstallPrompt) {
+        _deferredInstallPrompt.prompt();
+        const choice = await _deferredInstallPrompt.userChoice;
+        _deferredInstallPrompt = null;
+        const btn = document.getElementById('btnInstalarApp');
+        if (btn) btn.classList.remove('show');
+        if (choice && choice.outcome === 'accepted') {
+            Swal.fire({ icon: 'success', title: 'App instalado!', text: 'Abra pelo ícone FH Motores na tela inicial.', timer: 2500, showConfirmButton: false });
+        }
+        return;
+    }
+    if (isIOS) {
+        return Swal.fire({
+            icon: 'info',
+            title: 'Instalar no iPhone / iPad',
+            html: '1) Toque em <b>Compartilhar</b> (□↑)<br>2) Role e toque em <b>Adicionar à Tela de Início</b><br>3) Confirme — o ícone FH Motores aparece como app'
+        });
+    }
+    return Swal.fire({
+        icon: 'info',
+        title: 'Como instalar',
+        html: 'No Chrome/Edge do celular:<br>menu <b>⋮</b> → <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.<br><br>Abra pelo site HTTPS (GitHub Pages), não pelo arquivo local.'
+    });
+};
+
+// Mostra botão no iOS também (não tem beforeinstallprompt)
+(function() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+    if (isIOS && !isStandalone) {
+        const btn = document.getElementById('btnInstalarApp');
+        if (btn) btn.classList.add('show');
+    }
+})();
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        const swUrl = 'sw.js';
+        navigator.serviceWorker.register(swUrl).then(function(reg) {
+            console.log('PWA service worker ok', reg.scope);
+        }).catch(function(err) {
+            console.warn('Service worker não registrado (normal em file://)', err);
+        });
+    });
+}
 
 </script>
 </body>
