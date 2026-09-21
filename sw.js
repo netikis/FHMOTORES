@@ -1,5 +1,5 @@
 /* FH MOTORES — Service Worker (PWA) */
-const CACHE = 'fhmotores-v2';
+const CACHE = 'fhmotores-v3';
 const ASSETS = [
   './',
   './index.html',
