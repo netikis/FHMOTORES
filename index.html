@@ -61,11 +61,16 @@
             align-items: center; justify-content: center; flex-shrink: 0;
         }
         .btn-instalar-app {
-            display: none; margin-left: 6px; background: var(--gold); color: var(--dark-navy);
+            display: inline-flex; align-items: center; gap: 4px; margin-left: 6px;
+            background: var(--gold); color: var(--dark-navy);
             border: none; border-radius: 8px; padding: 7px 12px; font-size: 11px; font-weight: 800;
             text-transform: uppercase; white-space: nowrap; cursor: pointer;
         }
         .btn-instalar-app.show { display: inline-flex; align-items: center; gap: 4px; }
+        .filtro-mes {
+            width: auto; flex: 0 0 auto; min-width: 180px; max-width: 240px; margin-bottom: 0;
+            background: #1a252f; color: #ecf0f1; border: 1px solid var(--gold); font-weight: 700;
+        }
         .sidebar-backdrop {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
             z-index: 90; border: none; padding: 0; margin: 0; cursor: pointer;
@@ -844,12 +849,16 @@
         <section id="secVendas" class="section">
             <div class="card">
                 <h2>Vendas Concluídas</h2>
-                <p style="font-size:12px;color:var(--muted);margin-top:0">Somente vendas <strong style="color:#2ecc71">PAGAS</strong>. Pendentes ficam em <strong>Contas a Receber → Pendentes</strong>.</p>
+                <p style="font-size:12px;color:var(--muted);margin-top:0">Somente vendas <strong style="color:#2ecc71">PAGAS</strong>. Use o filtro do mês para ver só o que foi feito em agosto, setembro, etc. Pendentes ficam em <strong>Contas a Receber → Pendentes</strong>.</p>
                 <div class="dash-grid" id="dashVendasReceber">
-                    <div class="dash-card"><div class="lbl">Total Pago</div><div class="valor" id="dashVendasTotal" style="color:#2ecc71">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Qtd. Pagas</div><div class="valor" id="dashVendasPagasQtd" style="color:#2ecc71">0</div></div>
+                    <div class="dash-card"><div class="lbl" id="lblVendasTotal">Total do mês</div><div class="valor" id="dashVendasTotal" style="color:#2ecc71">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl" id="lblVendasQtd">Qtd. no mês</div><div class="valor" id="dashVendasPagasQtd" style="color:#2ecc71">0</div></div>
+                    <div class="dash-card"><div class="lbl" id="lblVendasEntrou">Entrou no caixa (mês)</div><div class="valor" id="dashVendasEntrou" style="color:#2ecc71">R$ 0</div></div>
                 </div>
-                <div class="toolbar"><input class="search" id="buscaVenda" placeholder="Buscar venda paga..." oninput="renderVendas()"></div>
+                <div class="toolbar">
+                    <select class="filtro-mes" id="filtroMesVendas" onchange="renderVendas()" title="Filtrar vendas do mês"></select>
+                    <input class="search" id="buscaVenda" placeholder="Buscar venda paga..." oninput="renderVendas()">
+                </div>
                 <div style="overflow-x:auto">
                     <table><thead><tr>
                         <th>Nº</th>
@@ -918,9 +927,10 @@
                         <div class="lbl">Saldo Inicial <small style="opacity:.8">(editar)</small></div>
                         <div class="valor" id="cxIni">R$ 0</div>
                     </div>
-                    <div class="dash-card"><div class="lbl">Entradas</div><div class="valor" id="cxEnt" style="color:#2ecc71">R$ 0</div></div>
-                    <div class="dash-card"><div class="lbl">Saídas</div><div class="valor" id="cxSai" style="color:#e74c3c">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl" id="lblCxEnt">Entradas</div><div class="valor" id="cxEnt" style="color:#2ecc71">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl" id="lblCxSai">Saídas</div><div class="valor" id="cxSai" style="color:#e74c3c">R$ 0</div></div>
                     <div class="dash-card"><div class="lbl">Saldo Atual</div><div class="valor" id="cxSaldo">R$ 0</div></div>
+                    <div class="dash-card"><div class="lbl" id="lblCxEntTodas">Entrou no mês (todas as caixas)</div><div class="valor" id="cxEntTodas" style="color:#2ecc71">R$ 0</div></div>
                 </div>
                 <div class="toolbar">
                     <button class="btn-entrada" onclick="abrirModalLanc('ENTRADA')">➕ Entrada</button>
@@ -936,7 +946,10 @@
                     <div id="conteudoFechamentoDia"></div>
                     <button type="button" class="btn-info btn-sm" style="margin-top:8px" onclick="imprimirFechamentoDia()">🖨️ Imprimir fechamento</button>
                 </div>
-                <div class="toolbar"><input class="search" id="buscaCaixa" placeholder="Buscar lançamento..." oninput="renderExtratoCaixa()"></div>
+                <div class="toolbar">
+                    <select class="filtro-mes" id="filtroMesCaixa" onchange="aoMudarFiltroMesCaixa()" title="Filtrar lançamentos do mês"></select>
+                    <input class="search" id="buscaCaixa" placeholder="Buscar lançamento..." oninput="renderExtratoCaixa()">
+                </div>
                 <div style="overflow-x:auto">
                     <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead>
                     <tbody id="tbExtratoCaixa"></tbody></table>
@@ -1055,8 +1068,15 @@
             <div class="card">
                 <h2>📱 App no celular (Android / iPhone)</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    Abra o site no celular (GitHub Pages) e use <b>⬇ Instalar App</b> no topo — o ícone FH Motores fica na tela inicial como aplicativo.
+                    Para usar fora da oficina (viagem, casa), abra no celular o site
+                    <b>https://netikis.github.io/FHMOTORES/</b>
+                    e toque em <b>⬇ Instalar App</b> no topo. O ícone FH Motores fica na tela inicial, como um aplicativo.
                 </p>
+                <ol style="font-size:12px;color:var(--muted);padding-left:18px;line-height:1.55">
+                    <li><b>Android (Chrome):</b> abra o link → toque em <b>Instalar App</b> (ou menu ⋮ → Instalar aplicativo / Adicionar à tela inicial).</li>
+                    <li><b>iPhone:</b> abra no Safari → Compartilhar (□↑) → <b>Adicionar à Tela de Início</b>.</li>
+                    <li>Depois abra pelo ícone, não pelo navegador. Precisa de internet para sincronizar.</li>
+                </ol>
                 <button type="button" class="btn-gold" onclick="instalarAppFH()">⬇ Como instalar / Instalar App</button>
             </div>
             <div class="card">
@@ -3831,6 +3851,78 @@ function dataVendaSortKey(d) {
     return '';
 }
 
+const MESES_PT = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function anoMesAtual() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function chaveAnoMesDeData(raw, ts) {
+    const s = String(raw || '').trim();
+    if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 7);
+    const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return m[3] + '-' + String(m[2]).padStart(2, '0');
+    if (ts) {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+    return '';
+}
+function rotuloMes(ym) {
+    if (!ym) return 'todos os meses';
+    const p = String(ym).split('-');
+    const mi = parseInt(p[1], 10);
+    return (MESES_PT[mi] || p[1]) + '/' + (p[0] || '');
+}
+function lancamentosTodasCaixas() {
+    const contas = ['mercadopago','picpayempresas','nubank','nubank_invest'];
+    let all = [];
+    contas.forEach(c => { all = all.concat(extratos[c] || []); });
+    return all;
+}
+function noMes(ym, raw, ts) {
+    if (!ym) return true;
+    return chaveAnoMesDeData(raw, ts) === ym;
+}
+function mesesDisponiveisCadastro() {
+    const set = {};
+    (documentos || []).forEach(d => {
+        if (d.tipo !== 'VENDA') return;
+        const k = chaveAnoMesDeData(d.dataConversao || d.data, d.timestamp);
+        if (k) set[k] = true;
+    });
+    lancamentosTodasCaixas().forEach(e => {
+        const k = chaveAnoMesDeData(e.dataStr || e.data, e.timestamp);
+        if (k) set[k] = true;
+    });
+    set[anoMesAtual()] = true;
+    return Object.keys(set).sort().reverse();
+}
+function preencherSelectMes(id) {
+    const sel = document.getElementById(id);
+    if (!sel) return '';
+    const prev = sel.value;
+    const meses = mesesDisponiveisCadastro();
+    sel.innerHTML = '<option value="">Todos os meses</option>' + meses.map(ym =>
+        '<option value="' + ym + '">' + rotuloMes(ym) + '</option>'
+    ).join('');
+    if (!sel.dataset.iniciado) {
+        sel.value = anoMesAtual();
+        sel.dataset.iniciado = '1';
+    } else if ([].some.call(sel.options, o => o.value === prev)) {
+        sel.value = prev;
+    }
+    return sel.value;
+}
+function totalEntradasCaixasNoMes(ym) {
+    let tot = 0;
+    lancamentosTodasCaixas().forEach(e => {
+        if (e.tipo !== 'ENTRADA') return;
+        if (!noMes(ym, e.dataStr || e.data, e.timestamp)) return;
+        tot += parseFloat(e.valor) || 0;
+    });
+    return tot;
+}
+
 window.ordenarVendasPorData = function() {
     window.ordemVendasData.dir = window.ordemVendasData.dir === 'asc' ? 'desc' : 'asc';
     renderVendas();
@@ -3839,11 +3931,20 @@ window.ordenarVendasPorData = function() {
 function renderVendas() {
     const busca = (document.getElementById('buscaVenda').value||'').toLowerCase();
     const tb = document.getElementById('tbVendas'); tb.innerHTML = '';
-    const vendas = documentos.filter(d => d.tipo === 'VENDA' && (d.statusPagamento || '') === 'PAGO');
+    const ym = preencherSelectMes('filtroMesVendas');
+    const vendas = documentos.filter(d => d.tipo === 'VENDA' && (d.statusPagamento || '') === 'PAGO'
+        && noMes(ym, d.dataConversao || d.data, d.timestamp));
     let tot = 0;
     vendas.forEach(d => { tot += parseFloat(d.total) || 0; });
     const elTot = document.getElementById('dashVendasTotal'); if (elTot) elTot.textContent = fmt(tot);
     const elQtd = document.getElementById('dashVendasPagasQtd'); if (elQtd) elQtd.textContent = String(vendas.length);
+    const elEnt = document.getElementById('dashVendasEntrou'); if (elEnt) elEnt.textContent = fmt(totalEntradasCaixasNoMes(ym));
+    const lblTot = document.getElementById('lblVendasTotal');
+    const lblQtd = document.getElementById('lblVendasQtd');
+    const lblEnt = document.getElementById('lblVendasEntrou');
+    if (lblTot) lblTot.textContent = ym ? 'Total ' + rotuloMes(ym) : 'Total pago';
+    if (lblQtd) lblQtd.textContent = ym ? 'Qtd. ' + rotuloMes(ym) : 'Qtd. pagas';
+    if (lblEnt) lblEnt.textContent = ym ? 'Entrou no caixa (' + rotuloMes(ym) + ')' : 'Entrou no caixa (todas)';
 
     const thData = document.getElementById('thVendaData');
     if (thData) {
@@ -3860,7 +3961,10 @@ function renderVendas() {
         return ((b.timestamp || 0) - (a.timestamp || 0)) * dir;
     });
     if (!lista.length) {
-        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#95a5a6;padding:18px">Nenhuma venda paga. Pendentes ficam em Contas a Receber.</td></tr>';
+        const msg = ym
+            ? 'Nenhuma venda paga em ' + rotuloMes(ym) + '. Troque o mês no filtro ou veja pendentes em Contas a Receber.'
+            : 'Nenhuma venda paga. Pendentes ficam em Contas a Receber.';
+        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#95a5a6;padding:18px">' + msg + '</td></tr>';
         return;
     }
     lista.forEach(d => {
@@ -4700,18 +4804,42 @@ function calcSaldoConta(conta) {
 }
 
 function atualizarDashCaixa() {
-    const { ent, sai, saldo } = calcSaldoConta(contaCaixaAtiva);
+    const ym = preencherSelectMes('filtroMesCaixa');
+    const { saldo } = calcSaldoConta(contaCaixaAtiva);
+    let ent = 0, sai = 0;
+    (extratos[contaCaixaAtiva] || []).forEach(e => {
+        if (!noMes(ym, e.dataStr || e.data, e.timestamp)) return;
+        if (e.tipo === 'ENTRADA') ent += parseFloat(e.valor) || 0;
+        else sai += parseFloat(e.valor) || 0;
+    });
     document.getElementById('cxIni').textContent = fmt(saldosIniciais[contaCaixaAtiva]);
     document.getElementById('cxEnt').textContent = fmt(ent);
     document.getElementById('cxSai').textContent = fmt(sai);
     document.getElementById('cxSaldo').textContent = fmt(saldo);
+    const lblEnt = document.getElementById('lblCxEnt');
+    const lblSai = document.getElementById('lblCxSai');
+    const lblAll = document.getElementById('lblCxEntTodas');
+    const elAll = document.getElementById('cxEntTodas');
+    if (lblEnt) lblEnt.textContent = ym ? 'Entradas (' + rotuloMes(ym) + ')' : 'Entradas';
+    if (lblSai) lblSai.textContent = ym ? 'Saídas (' + rotuloMes(ym) + ')' : 'Saídas';
+    if (lblAll) lblAll.textContent = ym ? 'Entrou no mês (todas as caixas)' : 'Entrou (todas as caixas)';
+    if (elAll) elAll.textContent = fmt(totalEntradasCaixasNoMes(ym));
 }
 
 function renderExtratoCaixa() {
     const busca = (document.getElementById('buscaCaixa').value||'').toLowerCase();
+    const ym = preencherSelectMes('filtroMesCaixa');
     const tb = document.getElementById('tbExtratoCaixa'); tb.innerHTML = '';
-    extratos[contaCaixaAtiva].filter(e => !busca || (e.descricao||'').toLowerCase().includes(busca))
-    .forEach(e => {
+    const lista = (extratos[contaCaixaAtiva] || []).filter(e =>
+        noMes(ym, e.dataStr || e.data, e.timestamp) &&
+        (!busca || (e.descricao||'').toLowerCase().includes(busca))
+    );
+    if (!lista.length) {
+        const msg = ym ? 'Nenhum lançamento em ' + rotuloMes(ym) + '.' : 'Nenhum lançamento nesta caixa.';
+        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#95a5a6;padding:18px">' + msg + '</td></tr>';
+        return;
+    }
+    lista.forEach(e => {
         const cor = e.tipo === 'ENTRADA' ? '#2ecc71' : '#e74c3c';
         const cat = e.categoria ? ` <small style="opacity:.8">[${e.categoria}]</small>` : '';
         tb.innerHTML += `<tr><td>${e.dataStr||'-'}</td><td style="color:${cor};font-weight:700">${e.tipo}</td>
@@ -4720,6 +4848,10 @@ function renderExtratoCaixa() {
     });
 }
 window.renderExtratoCaixa = renderExtratoCaixa;
+window.aoMudarFiltroMesCaixa = function() {
+    atualizarDashCaixa();
+    renderExtratoCaixa();
+};
 
 window.abrirModalLanc = function(tipo) {
     document.getElementById('lancTipo').value = tipo;
@@ -5497,33 +5629,39 @@ window.fecharMenuMobile = function() {
 };
 
 let _deferredInstallPrompt = null;
+const URL_APP_FH = 'https://netikis.github.io/FHMOTORES/';
+function appJaInstalado() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+}
+function atualizarBotaoInstalarApp() {
+    const btn = document.getElementById('btnInstalarApp');
+    if (!btn) return;
+    if (appJaInstalado()) btn.style.display = 'none';
+    else btn.style.display = '';
+}
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     _deferredInstallPrompt = e;
-    const btn = document.getElementById('btnInstalarApp');
-    if (btn) btn.classList.add('show');
+    atualizarBotaoInstalarApp();
 });
 window.addEventListener('appinstalled', function() {
     _deferredInstallPrompt = null;
-    const btn = document.getElementById('btnInstalarApp');
-    if (btn) btn.classList.remove('show');
+    atualizarBotaoInstalarApp();
 });
 
 window.instalarAppFH = async function() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true;
 
-    if (isStandalone) {
+    if (appJaInstalado()) {
         return Swal.fire({ icon: 'info', title: 'Já está instalado', text: 'O FH Motores já está rodando como aplicativo.' });
     }
     if (_deferredInstallPrompt) {
         _deferredInstallPrompt.prompt();
         const choice = await _deferredInstallPrompt.userChoice;
         _deferredInstallPrompt = null;
-        const btn = document.getElementById('btnInstalarApp');
-        if (btn) btn.classList.remove('show');
+        atualizarBotaoInstalarApp();
         if (choice && choice.outcome === 'accepted') {
             Swal.fire({ icon: 'success', title: 'App instalado!', text: 'Abra pelo ícone FH Motores na tela inicial.', timer: 2500, showConfirmButton: false });
         }
@@ -5533,27 +5671,17 @@ window.instalarAppFH = async function() {
         return Swal.fire({
             icon: 'info',
             title: 'Instalar no iPhone / iPad',
-            html: '1) Toque em <b>Compartilhar</b> (□↑)<br>2) Role e toque em <b>Adicionar à Tela de Início</b><br>3) Confirme — o ícone FH Motores aparece como app'
+            html: '1) Abra no <b>Safari</b>: <a href="' + URL_APP_FH + '" target="_blank">' + URL_APP_FH + '</a><br>2) Toque em <b>Compartilhar</b> (□↑)<br>3) Role e toque em <b>Adicionar à Tela de Início</b><br>4) Confirme — o ícone FH Motores aparece como app'
         });
     }
     return Swal.fire({
         icon: 'info',
-        title: 'Como instalar',
-        html: 'No Chrome/Edge do celular:<br>menu <b>⋮</b> → <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.<br><br>Abra pelo site HTTPS (GitHub Pages), não pelo arquivo local.'
+        title: 'Como instalar no celular',
+        html: '1) No celular, abra o Chrome em:<br><a href="' + URL_APP_FH + '" target="_blank"><b>' + URL_APP_FH + '</b></a><br><br>2) Toque em <b>Instalar App</b> no topo, ou menu <b>⋮</b> → <b>Instalar aplicativo</b> / <b>Adicionar à tela inicial</b>.<br><br>3) Depois use o ícone FH Motores para abrir de qualquer lugar (precisa de internet).'
     });
 };
 
-// Mostra botão no iOS também (não tem beforeinstallprompt)
-(function() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true;
-    if (isIOS && !isStandalone) {
-        const btn = document.getElementById('btnInstalarApp');
-        if (btn) btn.classList.add('show');
-    }
-})();
+atualizarBotaoInstalarApp();
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {

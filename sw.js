@@ -1,5 +1,5 @@
 /* FH MOTORES — Service Worker (PWA) */
-const CACHE = 'fhmotores-v1';
+const CACHE = 'fhmotores-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -35,15 +35,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req).then((res) => {
-        if (res && res.ok && url.origin === self.location.origin) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    fetch(req).then((res) => {
+      if (res && res.ok && url.origin === self.location.origin) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+      }
+      return res;
+    }).catch(() => caches.match(req))
   );
 });
