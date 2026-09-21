@@ -12,10 +12,13 @@
     <meta name="apple-mobile-web-app-title" content="FH Motores">
     <meta name="application-name" content="FH Motores">
     <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.json">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -68,6 +71,38 @@
             text-transform: uppercase; white-space: nowrap; cursor: pointer;
         }
         .btn-instalar-app.show { display: inline-flex; align-items: center; gap: 4px; }
+        .banner-instalar {
+            display: none; position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+            z-index: 150; background: #162233; border: 2px solid var(--gold); border-radius: 14px;
+            padding: 10px 12px; gap: 10px; align-items: center; box-shadow: 0 10px 28px rgba(0,0,0,.45);
+        }
+        .banner-instalar.show { display: flex; }
+        .banner-instalar img { width: 52px; height: 52px; border-radius: 12px; background: #1a2a43; flex-shrink: 0; }
+        .banner-instalar .txt { flex: 1; min-width: 0; }
+        .banner-instalar strong { display: block; color: var(--gold); font-size: 13px; }
+        .banner-instalar span { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; }
+        .banner-instalar .btn-instalar-agora {
+            background: var(--gold); color: var(--dark-navy); border: none; border-radius: 8px;
+            padding: 10px 14px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; flex-shrink: 0;
+        }
+        .overlay-instalar {
+            display: none; position: fixed; inset: 0; z-index: 200000; background: rgba(0,0,0,.78);
+            align-items: center; justify-content: center; padding: 16px;
+        }
+        .overlay-instalar.open { display: flex; }
+        .overlay-instalar .box {
+            width: 100%; max-width: 420px; background: #162233; border: 2px solid var(--gold);
+            border-radius: 16px; padding: 18px; color: #ecf0f1; text-align: center;
+        }
+        .overlay-instalar .ico-app { width: 96px; height: 96px; border-radius: 22px; margin: 0 auto 10px; background: #1a2a43; display: block; }
+        .overlay-instalar h3 { margin: 0 0 6px; color: var(--gold); }
+        .overlay-instalar p { font-size: 13px; color: #bdc3c7; margin: 0 0 14px; }
+        .overlay-instalar .par { display: flex; gap: 8px; flex-wrap: wrap; }
+        .overlay-instalar .par button { flex: 1; min-width: 140px; min-height: 48px; }
+        .passos-instalar { text-align: left; font-size: 13px; color: #ecf0f1; line-height: 1.55; margin: 0 0 12px; padding-left: 18px; }
+        @media (max-width: 900px) {
+            .banner-instalar.show { display: flex; }
+        }
         .filtro-mes {
             width: auto; flex: 0 0 auto; min-width: 180px; max-width: 240px; margin-bottom: 0;
             background: #1a252f; color: #ecf0f1; border: 1px solid var(--gold); font-weight: 700;
@@ -208,7 +243,7 @@
             .sidebar { width: 220px; min-width: 200px; }
         }
         @media (display-mode: standalone), (display-mode: fullscreen) {
-            .btn-instalar-app { display: none !important; }
+            .btn-instalar-app, .banner-instalar { display: none !important; }
         }
         button {
             padding: 9px 14px; border: none; border-radius: 6px; font-weight: 700;
@@ -313,6 +348,14 @@
     <div style="width:100%;max-width:400px;background:#162233;border:1px solid rgba(212,160,23,.35);border-radius:14px;padding:22px;color:#ecf0f1;font-family:Poppins,sans-serif">
         <h2 style="margin:0 0 6px;color:#d4a017;font-size:20px">FH MOTORES</h2>
         <p style="margin:0 0 16px;font-size:12px;color:#bdc3c7">Login seguro — só quem tem usuário no Firebase entra.</p>
+        <div style="display:flex;align-items:center;gap:10px;background:#1a252f;border:1px solid rgba(212,160,23,.35);border-radius:10px;padding:10px;margin-bottom:14px">
+            <img src="icons/icon-192.png" alt="FH Motores" width="48" height="48" style="border-radius:10px">
+            <div style="flex:1;min-width:0;text-align:left">
+                <strong style="display:block;color:#d4a017;font-size:12px">App na tela inicial</strong>
+                <span style="font-size:11px;color:#bdc3c7">Instala com este ícone no Android ou iPhone.</span>
+            </div>
+            <button type="button" class="btn-gold" style="padding:10px 12px;margin:0;white-space:nowrap" onclick="instalarAppFH()">INSTALAR</button>
+        </div>
         <label style="font-size:11px;color:#bdc3c7">E-mail</label>
         <input id="loginEmail" type="email" autocomplete="username" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:8px;border:1px solid #7f8c8d;background:#1a252f;color:#fff">
         <label style="font-size:11px;color:#bdc3c7">Senha</label>
@@ -331,10 +374,33 @@
         <strong>FH MOTORES</strong>
         <span>— Gestão de Oficina</span>
     </div>
-    <button type="button" class="btn-instalar-app" id="btnInstalarApp" onclick="instalarAppFH()">⬇ Instalar App</button>
+    <button type="button" class="btn-instalar-app" id="btnInstalarApp" onclick="instalarAppFH()">⬇ INSTALAR</button>
     <span id="statusFirebase" class="status-online" style="margin-left:auto;">● Modo Local</span>
     <span id="userEmailTop" style="font-size:11px;color:#bdc3c7;margin-left:10px"></span>
     <button type="button" id="btnLogout" class="btn-sm btn-danger" style="display:none;margin-left:8px" onclick="sairFHMotores()">Sair</button>
+</div>
+
+<div id="bannerInstalarApp" class="banner-instalar" role="dialog" aria-label="Instalar aplicativo">
+    <img src="icons/icon-192.png" alt="Ícone FH Motores">
+    <div class="txt">
+        <strong>Instalar FH Motores</strong>
+        <span>Vai para a tela inicial do celular, com esta imagem.</span>
+    </div>
+    <button type="button" class="btn-instalar-agora" onclick="instalarAppFH()">INSTALAR</button>
+</div>
+
+<div id="overlayInstalarApp" class="overlay-instalar" onclick="if(event.target===this)fecharOverlayInstalar()">
+    <div class="box" role="dialog" aria-labelledby="tituloInstalarApp">
+        <img class="ico-app" src="icons/icon-512.png" alt="FH Motores">
+        <h3 id="tituloInstalarApp">Instalar FH Motores</h3>
+        <p id="textoInstalarApp">O app fica salvo na área do celular com este ícone.</p>
+        <div id="escolhaInstalarApp" class="par">
+            <button type="button" class="btn-success" onclick="instalarAppAndroid()">🤖 Android</button>
+            <button type="button" class="btn-info" onclick="instalarAppIphone()"> iPhone</button>
+        </div>
+        <div id="passosInstalarApp" style="display:none"></div>
+        <button type="button" class="btn-sm" style="margin-top:12px;background:#34495e;color:#fff" onclick="fecharOverlayInstalar()">Fechar</button>
+    </div>
 </div>
 
 <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" onclick="fecharMenuMobile()" aria-label="Fechar menu"></button>
@@ -1147,18 +1213,28 @@
                 </form>
             </div>
             <div class="card">
-                <h2>📱 App no celular (Android / iPhone)</h2>
+                <h2>📱 Instalar o app no celular</h2>
                 <p style="font-size:12px;color:var(--muted);margin-top:0">
-                    Para usar fora da oficina (viagem, casa), abra no celular o site
-                    <b>https://netikis.github.io/FHMOTORES/</b>
-                    e toque em <b>⬇ Instalar App</b> no topo. O ícone FH Motores fica na tela inicial, como um aplicativo.
+                    Abra este sistema <b>no celular</b> (Chrome no Android ou Safari no iPhone) e toque em <b>INSTALAR</b>.
+                    O FH Motores vai para a tela inicial <b>com o ícone da oficina</b>.
                 </p>
+                <div style="display:flex;align-items:center;gap:12px;background:var(--panel-dark);border:1px solid rgba(212,160,23,.35);border-radius:12px;padding:12px;margin-bottom:12px">
+                    <img src="icons/icon-192.png" alt="Ícone do app" width="64" height="64" style="border-radius:14px">
+                    <div>
+                        <strong style="color:var(--gold)">FH Motores</strong>
+                        <div style="font-size:12px;color:var(--muted)">Este é o ícone que fica na área do celular.</div>
+                    </div>
+                </div>
+                <div class="toolbar" style="flex-wrap:wrap">
+                    <button type="button" class="btn-success" onclick="instalarAppAndroid()">🤖 INSTALAR no Android</button>
+                    <button type="button" class="btn-info" onclick="instalarAppIphone()"> INSTALAR no iPhone</button>
+                </div>
                 <ol style="font-size:12px;color:var(--muted);padding-left:18px;line-height:1.55">
-                    <li><b>Android (Chrome):</b> abra o link → toque em <b>Instalar App</b> (ou menu ⋮ → Instalar aplicativo / Adicionar à tela inicial).</li>
+                    <li><b>Android:</b> toque em INSTALAR — o Chrome pergunta e coloca o app na tela inicial.</li>
                     <li><b>iPhone:</b> abra no Safari → Compartilhar (□↑) → <b>Adicionar à Tela de Início</b>.</li>
-                    <li>Depois abra pelo ícone, não pelo navegador. Precisa de internet para sincronizar.</li>
+                    <li>Não instale pelo computador: o ícone só vai para o celular se o INSTALAR for tocado no próprio celular.</li>
                 </ol>
-                <button type="button" class="btn-gold" onclick="instalarAppFH()">⬇ Como instalar / Instalar App</button>
+                <p style="font-size:11px;color:var(--muted);margin:0">Link: <b>https://netikis.github.io/FHMOTORES/</b></p>
             </div>
             <div class="card">
                 <h2>☁ Sincronização + Segurança (Firebase)</h2>
@@ -6060,16 +6136,34 @@ window.fecharMenuMobile = function() {
 
 let _deferredInstallPrompt = null;
 const URL_APP_FH = 'https://netikis.github.io/FHMOTORES/';
-function appJaInstalado() {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true;
+const ICON_APP_FH = 'icons/icon-192.png';
+
+function uaInstalar() {
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    const isMobile = isIOS || isAndroid || /Mobile/i.test(ua);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    return { ua: ua, isIOS: isIOS, isAndroid: isAndroid, isMobile: isMobile, isStandalone: isStandalone };
 }
+function appJaInstalado() { return uaInstalar().isStandalone; }
+
 function atualizarBotaoInstalarApp() {
+    const info = uaInstalar();
     const btn = document.getElementById('btnInstalarApp');
-    if (!btn) return;
-    if (appJaInstalado()) btn.style.display = 'none';
-    else btn.style.display = '';
+    const banner = document.getElementById('bannerInstalarApp');
+    if (info.isStandalone) {
+        if (btn) btn.style.display = 'none';
+        if (banner) banner.classList.remove('show');
+        return;
+    }
+    if (btn) btn.style.display = '';
+    if (banner) {
+        if (info.isMobile) banner.classList.add('show');
+        else banner.classList.remove('show');
+    }
 }
+
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     _deferredInstallPrompt = e;
@@ -6078,46 +6172,120 @@ window.addEventListener('beforeinstallprompt', function(e) {
 window.addEventListener('appinstalled', function() {
     _deferredInstallPrompt = null;
     atualizarBotaoInstalarApp();
+    fecharOverlayInstalar();
+    if (window.Swal) {
+        Swal.fire({ icon: 'success', title: 'App na tela inicial', text: 'O ícone FH Motores foi salvo na área do celular.', timer: 2800, showConfirmButton: false });
+    }
 });
 
-window.instalarAppFH = async function() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+window.fecharOverlayInstalar = function() {
+    const ov = document.getElementById('overlayInstalarApp');
+    if (ov) ov.classList.remove('open');
+    const passos = document.getElementById('passosInstalarApp');
+    const escolha = document.getElementById('escolhaInstalarApp');
+    if (passos) { passos.style.display = 'none'; passos.innerHTML = ''; }
+    if (escolha) escolha.style.display = 'flex';
+    const t = document.getElementById('tituloInstalarApp');
+    const p = document.getElementById('textoInstalarApp');
+    if (t) t.textContent = 'Instalar FH Motores';
+    if (p) p.textContent = 'O app fica salvo na área do celular com este ícone.';
+};
 
+function abrirOverlayInstalar() {
+    const ov = document.getElementById('overlayInstalarApp');
+    if (ov) ov.classList.add('open');
+}
+
+async function dispararInstalacaoNativa() {
+    if (!_deferredInstallPrompt) return false;
+    _deferredInstallPrompt.prompt();
+    const choice = await _deferredInstallPrompt.userChoice;
+    _deferredInstallPrompt = null;
+    atualizarBotaoInstalarApp();
+    if (choice && choice.outcome === 'accepted') return true;
+    return 'dismissed';
+}
+
+window.instalarAppAndroid = async function() {
     if (appJaInstalado()) {
+        return Swal.fire({ icon: 'info', title: 'Já está instalado', text: 'Abra pelo ícone FH Motores na tela inicial.' });
+    }
+    const nativo = await dispararInstalacaoNativa();
+    if (nativo === true) return;
+    abrirOverlayInstalar();
+    const escolha = document.getElementById('escolhaInstalarApp');
+    const passos = document.getElementById('passosInstalarApp');
+    const t = document.getElementById('tituloInstalarApp');
+    const p = document.getElementById('textoInstalarApp');
+    if (t) t.textContent = 'Instalar no Android';
+    if (p) p.textContent = 'O ícone FH Motores vai para a tela inicial.';
+    if (escolha) escolha.style.display = 'none';
+    if (passos) {
+        passos.style.display = 'block';
+        passos.innerHTML = '<ol class="passos-instalar">' +
+            '<li>Abra este site no <b>Chrome</b> do celular (não no Instagram/WhatsApp).</li>' +
+            '<li>Toque em <b>INSTALAR</b> no topo — ou menu <b>⋮</b> → <b>Instalar aplicativo</b> / <b>Adicionar à tela inicial</b>.</li>' +
+            '<li>Confirme. O app fica na área do celular com a imagem FH Motores.</li>' +
+            '</ol>' +
+            (nativo === 'dismissed' ? '<p style="font-size:12px;color:#f1c40f">Você cancelou o aviso do Chrome. Use o menu ⋮ para instalar.</p>' : '') +
+            '<p style="font-size:11px;color:#95a5a6;word-break:break-all">' + URL_APP_FH + '</p>';
+    }
+};
+
+window.instalarAppIphone = function() {
+    if (appJaInstalado()) {
+        return Swal.fire({ icon: 'info', title: 'Já está instalado', text: 'Abra pelo ícone FH Motores na tela inicial.' });
+    }
+    abrirOverlayInstalar();
+    const escolha = document.getElementById('escolhaInstalarApp');
+    const passos = document.getElementById('passosInstalarApp');
+    const t = document.getElementById('tituloInstalarApp');
+    const p = document.getElementById('textoInstalarApp');
+    if (t) t.textContent = 'Instalar no iPhone';
+    if (p) p.textContent = 'No iPhone o Safari coloca o ícone na tela inicial.';
+    if (escolha) escolha.style.display = 'none';
+    if (passos) {
+        passos.style.display = 'block';
+        passos.innerHTML = '<ol class="passos-instalar">' +
+            '<li>Abra no <b>Safari</b> (não no Chrome):<br><b>' + URL_APP_FH + '</b></li>' +
+            '<li>Toque em <b>Compartilhar</b> (quadrado com a seta para cima).</li>' +
+            '<li>Role e toque em <b>Adicionar à Tela de Início</b>.</li>' +
+            '<li>Confirme. O ícone FH Motores aparece na área do iPhone.</li>' +
+            '</ol>';
+    }
+};
+
+window.instalarAppFH = async function() {
+    const info = uaInstalar();
+    if (info.isStandalone) {
         return Swal.fire({ icon: 'info', title: 'Já está instalado', text: 'O FH Motores já está rodando como aplicativo.' });
     }
-    if (_deferredInstallPrompt) {
-        _deferredInstallPrompt.prompt();
-        const choice = await _deferredInstallPrompt.userChoice;
-        _deferredInstallPrompt = null;
-        atualizarBotaoInstalarApp();
-        if (choice && choice.outcome === 'accepted') {
-            Swal.fire({ icon: 'success', title: 'App instalado!', text: 'Abra pelo ícone FH Motores na tela inicial.', timer: 2500, showConfirmButton: false });
-        }
-        return;
+    if (info.isAndroid || (!info.isIOS && _deferredInstallPrompt)) {
+        const nativo = await dispararInstalacaoNativa();
+        if (nativo === true) return;
+        if (info.isAndroid) return window.instalarAppAndroid();
     }
-    if (isIOS) {
-        return Swal.fire({
-            icon: 'info',
-            title: 'Instalar no iPhone / iPad',
-            html: '1) Abra no <b>Safari</b>: <a href="' + URL_APP_FH + '" target="_blank">' + URL_APP_FH + '</a><br>2) Toque em <b>Compartilhar</b> (□↑)<br>3) Role e toque em <b>Adicionar à Tela de Início</b><br>4) Confirme — o ícone FH Motores aparece como app'
-        });
+    if (info.isIOS) return window.instalarAppIphone();
+    abrirOverlayInstalar();
+    const escolha = document.getElementById('escolhaInstalarApp');
+    const passos = document.getElementById('passosInstalarApp');
+    if (escolha) escolha.style.display = 'flex';
+    if (passos) {
+        passos.style.display = 'block';
+        passos.innerHTML = '<p style="font-size:12px;color:#bdc3c7;margin:12px 0 8px">No computador o app não vai para o celular. Abra o link no telefone e toque em INSTALAR, ou escolha Android / iPhone:</p>' +
+            '<img alt="QR Code" width="160" height="160" style="background:#fff;border-radius:8px;padding:6px" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(URL_APP_FH) + '" onerror="this.style.display=\'none\'">' +
+            '<p style="font-size:13px;color:#d4a017;word-break:break-all;margin-top:8px"><b>' + URL_APP_FH + '</b></p>' +
+            '<button type="button" class="btn-gold btn-sm" onclick="navigator.clipboard.writeText(\'' + URL_APP_FH + '\').then(function(){ if(window.Swal) Swal.fire({toast:true,position:\'top\',icon:\'success\',title:\'Link copiado\',timer:1400,showConfirmButton:false}); })">Copiar link</button>';
     }
-    return Swal.fire({
-        icon: 'info',
-        title: 'Como instalar no celular',
-        html: '1) No celular, abra o Chrome em:<br><a href="' + URL_APP_FH + '" target="_blank"><b>' + URL_APP_FH + '</b></a><br><br>2) Toque em <b>Instalar App</b> no topo, ou menu <b>⋮</b> → <b>Instalar aplicativo</b> / <b>Adicionar à tela inicial</b>.<br><br>3) Depois use o ícone FH Motores para abrir de qualquer lugar (precisa de internet).'
-    });
 };
 
 atualizarBotaoInstalarApp();
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-        const swUrl = 'sw.js';
-        navigator.serviceWorker.register(swUrl).then(function(reg) {
+        navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' }).then(function(reg) {
             console.log('PWA service worker ok', reg.scope);
+            if (reg.update) reg.update();
         }).catch(function(err) {
             console.warn('Service worker não registrado (normal em file://)', err);
         });

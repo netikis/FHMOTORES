@@ -1,19 +1,24 @@
 /* FH MOTORES — Service Worker (PWA) */
-const CACHE = 'fhmotores-v3';
+const CACHE = 'fhmotores-v4';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './manifest.json',
+  './apple-touch-icon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.all(ASSETS.map((url) => cache.add(url).catch(() => null)));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -28,7 +33,6 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // Não cachear Firebase / APIs externas
   if (url.hostname.includes('firebase') || url.hostname.includes('googleapis') ||
       url.hostname.includes('gstatic') || url.hostname.includes('jsdelivr') ||
       url.hostname.includes('google')) {
